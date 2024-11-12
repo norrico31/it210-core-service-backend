@@ -13,9 +13,10 @@ func main() {
 		log.Fatalf("Failed to connect to the database %v", err)
 	}
 
+	seeders.SeedUsers(db)
 	seeders.SeedStatuses(db)
 	seeders.SeedRoles(db)
-	seeders.SeedTasks(db)
 	seeders.SeedProjects(db)
+	seeders.SeedTasks(db)
 	log.Println("Seeding successfully complete.")
 }

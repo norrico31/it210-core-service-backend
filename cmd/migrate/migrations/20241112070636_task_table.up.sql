@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     description TEXT,
     statusId INT NOT NULL REFERENCES statuses(id) ON DELETE
     SET NULL,
-        assignedTo INT REFERENCES users(id) ON DELETE
+        userId INT REFERENCES users(id) ON DELETE
     SET NULL,
         projectId INT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

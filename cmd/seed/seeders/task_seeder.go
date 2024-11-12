@@ -1,4 +1,3 @@
-// cmd/seed/seeders/task_seeder.go
 package seeders
 
 import (
@@ -11,6 +10,31 @@ import (
 )
 
 func SeedTasks(db *sql.DB) error {
+	userIds := make(map[string]int)
+
+	rows, err := db.Query("SELECT id, firstName FROM users")
+	if err != nil {
+		log.Printf("Failed to fetch users: %v\n", err)
+		return err
+	}
+	defer rows.Close()
+
+	// Map user firstNames to user IDs
+	for rows.Next() {
+		var id int
+		var firstName string
+		if err := rows.Scan(&id, &firstName); err != nil {
+			log.Printf("Failed to scan user: %v\n", err)
+			return err
+		}
+		userIds[firstName] = id
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Printf("Failed to iterate users: %v\n", err)
+		return err
+	}
+
 	// Sample data for seeding
 	tasks := []entities.Task{
 		{
@@ -18,15 +42,15 @@ func SeedTasks(db *sql.DB) error {
 			SubTask:     []string{"Define ER model", "Setup tables", "Define constraints"},
 			Description: "desc 1",
 			StatusID:    1,
-			UserId:      2,
+			UserId:      userIds["Chester"], // change this for prod
 			Projects:    []entities.Project{{ID: 1}},
 		},
 		{
 			Title:       "Develop API Endpoints",
 			SubTask:     []string{"Setup router", "Create handlers", "Write tests"},
-			Description: "desc 2", // Assume valid description ID exists
+			Description: "desc 2",
 			StatusID:    2,
-			UserId:      3,
+			UserId:      userIds["Mary Grace"], // change this for prod
 			Projects:    []entities.Project{{ID: 1}},
 		},
 	}
@@ -40,11 +64,17 @@ func SeedTasks(db *sql.DB) error {
 		}
 		subTaskArray += "}"
 
-		// Insert task into the database
+		// Ensure projectId is set correctly as it's a NOT NULL field
+		if len(task.Projects) == 0 || task.Projects[0].ID == 0 {
+			log.Printf("Task %s has no valid projectId set. Skipping task.\n", task.Title)
+			continue
+		}
+
+		// Insert task into the database with projectId
 		_, err := db.Exec(`
-			INSERT INTO tasks (title, subTask, description, statusId, userId, createdAt, updatedAt)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
-		`, task.Title, subTaskArray, task.Description, task.StatusID, task.UserId, time.Now(), time.Now())
+            INSERT INTO tasks (title, subTask, description, statusId, userId, projectId, createdAt, updatedAt)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        `, task.Title, subTaskArray, task.Description, task.StatusID, task.UserId, task.Projects[0].ID, time.Now(), time.Now())
 
 		if err != nil {
 			log.Printf("Failed to insert task %s: %v\n", task.Title, err)
@@ -59,13 +89,12 @@ func SeedTasks(db *sql.DB) error {
 			log.Printf("Failed to fetch task ID for %s: %v\n", task.Title, err)
 			return err
 		}
-
 		// Insert project-task associations (if the Projects slice is populated)
 		for _, project := range task.Projects {
 			_, err := db.Exec(`
-				INSERT INTO project_tasks (project_id, task_id)
-				VALUES ($1, $2)
-			`, project.ID, taskId)
+                INSERT INTO project_tasks (project_id, task_id)
+                VALUES ($1, $2)
+            `, project.ID, taskId)
 
 			if err != nil {
 				log.Printf("Failed to associate task %d with project %d: %v\n", taskId, project.ID, err)
