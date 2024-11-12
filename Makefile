@@ -7,6 +7,9 @@ test:
 run: build
 	@./bin/it210
 
+run-dev:
+	@go run ./cmd
+
 migration:
 	@migrate create -ext sql -dir cmd/migrate/migrations $(filter-out $@,$(MAKECMDGOALS))
 

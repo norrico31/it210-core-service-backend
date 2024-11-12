@@ -34,7 +34,7 @@ func (s *APIServer) Run() error {
 	router.HandleFunc("/api/v1/core/helloworld", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		str := fmt.Sprintf("Core Service: Hello World")
+		str := fmt.Sprintf("Core Service: Hello World from core service")
 		json.NewEncoder(w).Encode(str)
 	})
 	log.Println("Core Service: Running on port", s.addr)
