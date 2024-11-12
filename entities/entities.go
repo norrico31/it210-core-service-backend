@@ -40,6 +40,10 @@ type Task struct {
 	Projects    []Project  `json:"projects"`
 }
 
+type RoleStore interface {
+	GetRoles() ([]*Role, error)
+}
+
 type Role struct {
 	ID          int        `json:"id"`
 	Name        string     `json:"name"`

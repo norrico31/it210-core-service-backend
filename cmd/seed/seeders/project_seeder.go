@@ -9,21 +9,15 @@ import (
 )
 
 func SeedProjects(db *sql.DB) error {
-	// Sample data for seeding
 	projects := []entities.Project{
 		{
 			Name:        "Project Alpha",
 			Description: "Description for Project Alpha",
-			// Users:       []entities.User{{ID: 1}, {ID: 2}}, // Assumed existing user IDs
-			// Tasks:       []entities.Task{{ID: 1}, {ID: 2}}, // Assumed existing task IDs
 		},
 		{
 			Name:        "Project Beta",
 			Description: "Description for Project Beta",
-			// Users:       []entities.User{{ID: 3}, {ID: 4}}, // Assumed existing user IDs
-			// Tasks:       []entities.Task{{ID: 3}, {ID: 4}}, // Assumed existing task IDs
 		},
-		// Add more projects as needed
 	}
 
 	// Insert each project into the database
