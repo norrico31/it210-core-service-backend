@@ -7,7 +7,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/norrico31/it210-core-service-backend/config"
-	"github.com/norrico31/it210-core-service-backend/services/role"
+	"github.com/norrico31/it210-core-service-backend/services/roles"
+	"github.com/norrico31/it210-core-service-backend/services/users"
 )
 
 type APIServer struct {
@@ -61,9 +62,13 @@ func (s *APIServer) Run() error {
 
 	subrouterv1 := router.PathPrefix("/api/v1/core").Subrouter()
 
-	roleStore := role.NewStore(s.db)
-	roleHandler := role.NewHandler(roleStore)
-	role.RegisterRoutes(subrouterv1, roleHandler)
+	roleStore := roles.NewStore(s.db)
+	roleHandler := roles.NewHandler(roleStore)
+	roles.RegisterRoutes(subrouterv1, roleHandler)
+
+	usersStore := users.NewStore(s.db)
+	usersHandler := users.NewHandler(usersStore)
+	users.RegisterRoutes(subrouterv1, usersHandler)
 
 	log.Println("Core Service: Running on port ", s.addr)
 	return http.ListenAndServe(s.addr, router)

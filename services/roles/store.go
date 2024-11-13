@@ -1,4 +1,4 @@
-package role
+package roles
 
 import (
 	"database/sql"
@@ -17,10 +17,8 @@ func NewStore(db *sql.DB) *Store {
 }
 
 func (s *Store) GetRoles() ([]*entities.Role, error) {
-	rows, err := s.db.Query(`SELECT 
-		name,
-		description
-	FROM roles WHERE deletedAt IS NULL`)
+	fmt.Println("GET ROLES")
+	rows, err := s.db.Query(`SELECT * FROM roles WHERE deletedAt IS NULL`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query roles: %v", err)
 	}
@@ -29,14 +27,14 @@ func (s *Store) GetRoles() ([]*entities.Role, error) {
 	var roles []*entities.Role
 
 	for rows.Next() {
-		var role entities.Role
+		role := &entities.Role{}
+		err := scanRowIntoRole(rows, role)
 
-		err := rows.Scan(&role.Name, &role.Description)
 		if err != nil {
 			log.Printf("Failed to scan role: %v", err)
 			continue
 		}
-		roles = append(roles, &role)
+		roles = append(roles, role)
 	}
 
 	if err := rows.Err(); err != nil {

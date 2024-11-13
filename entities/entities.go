@@ -16,6 +16,32 @@ type User struct {
 	Projects     []Project  `json:"projects"`
 }
 
+type UserStore interface {
+	GetUsers() ([]*User, error)
+	GetUserByEmail(email string) (*User, error)
+	GetUserById(id int) (*User, error)
+	CreateUser(User) error
+	UpdateUser(User) error
+	DeleteUser(int) error
+	SetUserActive(int) error
+	UpdateLastActiveTime(int, time.Time) error
+}
+
+// USER MUST HAVE A TEAMS
+type UserRegisterPayload struct {
+	FirstName string `json:"firstName" validate:"required"`
+	LastName  string `json:"lastName" validate:"required"`
+	Email     string `json:"email" validate:"required,email"`
+	Password  string `json:"password" validate:"required,min=3,max=130"`
+}
+
+type UserUpdatePayload struct {
+	FirstName string `json:"firstName" validate:"required"`
+	LastName  string `json:"lastName" validate:"required"`
+	Email     string `json:"email" validate:"required,email"`
+	Password  string `json:"password,omitempty"` // Optional, for password update
+}
+
 type Status struct {
 	ID          int        `json:"id"`
 	Name        string     `json:"name"`

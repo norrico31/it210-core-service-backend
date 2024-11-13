@@ -1,4 +1,4 @@
-package role
+package roles
 
 import (
 	"github.com/gorilla/mux"
