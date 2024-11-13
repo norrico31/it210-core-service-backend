@@ -42,6 +42,10 @@ type Task struct {
 
 type RoleStore interface {
 	GetRoles() ([]*Role, error)
+	GetRole(int) (*Role, error)
+	CreateRole(Role) error
+	UpdateRole(Role) error
+	DeleteRole(int) error
 }
 
 type Role struct {
