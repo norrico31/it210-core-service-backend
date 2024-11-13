@@ -96,16 +96,7 @@ func (s *Store) UpdateRole(role entities.Role) error {
 		return err
 	}
 
-	existingRole, err := s.GetRole(role.ID)
-
-	if err != nil {
-		if rbErr := tx.Rollback(); rbErr != nil {
-			return fmt.Errorf("error fetching role: %v, rollback error: %v", err, rbErr)
-		}
-		return err
-	}
-
-	_, err = tx.Exec("UPDATE roles SET name = ?, description = ? WHERE id = ?", role.Name, role.Description, existingRole.ID)
+	_, err = tx.Exec("UPDATE roles SET name = ?, description = ? WHERE id = ?", role.Name, role.Description, role.ID)
 	if err != nil {
 		if rbErr := tx.Rollback(); rbErr != nil {
 			return fmt.Errorf("insert error: %v, rollback error: %v", err, rbErr)
@@ -127,15 +118,7 @@ func (s *Store) DeleteRole(id int) error {
 		return err
 	}
 
-	existingRole, err := s.GetRole(id)
-	if err != nil {
-		if rbErr := tx.Rollback(); rbErr != nil {
-			return fmt.Errorf("error fetching role: %v, rollback error: %v", err, rbErr)
-		}
-		return err
-	}
-
-	_, err = tx.Exec("DELETE FROM roles WHERE id = ?", existingRole.ID)
+	_, err = tx.Exec("DELETE FROM roles WHERE id = ?", id)
 	if err != nil {
 		// Rollback in case of any error during deletion
 		if rbErr := tx.Rollback(); rbErr != nil {

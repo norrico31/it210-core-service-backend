@@ -95,6 +95,12 @@ func (h *Handler) handleUpdateRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	existingRole, err := h.store.GetRole(roleId)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
 	var payload = entities.Role{}
 
 	if err := utils.ParseJSON(r, &payload); err != nil {
@@ -103,7 +109,7 @@ func (h *Handler) handleUpdateRole(w http.ResponseWriter, r *http.Request) {
 	}
 
 	role := entities.Role{
-		ID:          roleId,
+		ID:          existingRole.ID,
 		Name:        payload.Name,
 		Description: payload.Description,
 	}
@@ -131,7 +137,13 @@ func (h *Handler) handleDeleteRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.store.DeleteRole(roleId)
+	existingRole, err := h.store.GetRole(roleId)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	err = h.store.DeleteRole(existingRole.ID)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, err)
 		return
