@@ -46,6 +46,7 @@ type RoleStore interface {
 	CreateRole(Role) error
 	UpdateRole(Role) error
 	DeleteRole(int) error
+	RestoreRole(int) error
 }
 
 type Role struct {

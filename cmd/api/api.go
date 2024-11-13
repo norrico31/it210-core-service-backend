@@ -64,6 +64,7 @@ func (s *APIServer) Run() error {
 	roleStore := role.NewStore(s.db)
 	roleHandler := role.NewHandler(roleStore)
 	role.RegisterRoutes(subrouterv1, roleHandler)
+
 	log.Println("Core Service: Running on port ", s.addr)
 	return http.ListenAndServe(s.addr, router)
 }

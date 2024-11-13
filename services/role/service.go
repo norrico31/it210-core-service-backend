@@ -34,11 +34,11 @@ func (h *Handler) handleGetRoles(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) handleGetRole(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	str, ok := vars["roleId"]
+
 	if !ok {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing role ID"))
 		return
 	}
-
 	roleId, err := strconv.Atoi(str)
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid role ID"))
@@ -144,6 +144,35 @@ func (h *Handler) handleDeleteRole(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = h.store.DeleteRole(existingRole.ID)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusNoContent, nil)
+}
+
+func (h *Handler) handleRestoreRole(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	str, ok := vars["roleId"]
+	if !ok {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing role ID"))
+		return
+	}
+
+	roleId, err := strconv.Atoi(str)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid user ID"))
+		return
+	}
+
+	existingRole, err := h.store.GetRole(roleId)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	err = h.store.RestoreRole(existingRole.ID)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, err)
 		return
