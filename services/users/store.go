@@ -18,39 +18,105 @@ func NewStore(db *sql.DB) *Store {
 }
 
 func (s *Store) GetUsers() ([]*entities.User, error) {
-	rows, err := s.db.Query(`SELECT 
-		id,
-		firstName,
-		lastName,
-		email,
-		age,
-		lastActiveAt,
-		createdAt,
-		updatedAt,
-		deletedAt
-	FROM users WHERE deletedAt IS NULL`)
+	rows, err := s.db.Query(`
+        SELECT 
+            u.id AS user_id,
+            u.firstName,
+            u.lastName,
+            u.email,
+            u.age,
+            u.lastActiveAt,
+            u.createdAt,
+            u.updatedAt,
+            u.deletedAt,
+            p.id AS project_id,
+            p.name AS project_name,
+            p.description AS project_description,
+            p.createdAt AS project_createdAt,
+            p.updatedAt AS project_updatedAt,
+            p.deletedAt AS project_deletedAt
+        FROM users u
+        LEFT JOIN users_projects up ON u.id = up.user_id
+        LEFT JOIN projects p ON up.project_id = p.id
+        WHERE u.deletedAt IS NULL
+        ORDER BY u.id, p.id;
+    `)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query users: %v", err)
+		return nil, fmt.Errorf("failed to query users and projects: %v", err)
 	}
 	defer rows.Close()
 
-	var users []*entities.User
+	userMap := make(map[int]*entities.User)
 
-	fmt.Println("MAY SOMETHING DITO GET USERS")
 	for rows.Next() {
-		var user entities.User
-		err := scanRowIntoUser(rows, &user)
+		var (
+			userID             int
+			projectID          sql.NullInt32
+			projectName        sql.NullString
+			projectDescription sql.NullString
+			projectCreatedAt   sql.NullTime
+			projectUpdatedAt   sql.NullTime
+			projectDeletedAt   sql.NullTime
+			user               entities.User
+			project            entities.Project
+		)
+
+		// Scan user and project data from the row
+		err := rows.Scan(
+			&userID,
+			&user.FirstName,
+			&user.LastName,
+			&user.Email,
+			&user.Age,
+			&user.LastActiveAt,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+			&user.DeletedAt,
+			&projectID,
+			&projectName,
+			&projectDescription,
+			&projectCreatedAt,
+			&projectUpdatedAt,
+			&projectDeletedAt,
+		)
 		if err != nil {
-			log.Printf("Failed to scan user: %v", err)
+			log.Printf("Failed to scan user or project: %v", err)
 			continue
 		}
-		users = append(users, &user)
+
+		// Check if the user already exists in the map
+		if _, exists := userMap[userID]; !exists {
+			user.ID = userID
+			user.Projects = []entities.Project{}
+			userMap[userID] = &user
+		}
+
+		// If project information is valid, add it to the user's projects
+		if projectID.Valid {
+			project.ID = int(projectID.Int32)
+			project.Name = projectName.String
+			project.Description = projectDescription.String
+			project.CreatedAt = projectCreatedAt.Time
+			project.UpdatedAt = projectUpdatedAt.Time
+
+			if projectDeletedAt.Valid {
+				project.DeletedAt = &projectDeletedAt.Time
+			} else {
+				project.DeletedAt = nil
+			}
+
+			// Append the project to the user's project list
+			userMap[userID].Projects = append(userMap[userID].Projects, project)
+		}
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("failed to iterate over user rows: %v", err)
+	// Convert userMap to a slice
+	userList := make([]*entities.User, 0, len(userMap))
+	for _, user := range userMap {
+		userList = append(userList, user)
 	}
-	return users, nil
+
+	return userList, nil
 }
 
 func (s *Store) GetUserById(id int) (*entities.User, error) {

@@ -91,6 +91,6 @@ type Project struct {
 	CreatedAt   time.Time  `json:"createdAt"`
 	UpdatedAt   time.Time  `json:"updatedAt"`
 	DeletedAt   *time.Time `json:"deletedAt"`
-	Users       []User     `json:"users"`
-	Tasks       []Task     `json:"tasks"`
+	Users       []User     `json:"users,omitempty"`
+	Tasks       []Task     `json:"tasks,omitempty"`
 }

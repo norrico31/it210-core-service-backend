@@ -23,13 +23,12 @@ func SeedProjects(db *sql.DB) error {
 
 	var wg sync.WaitGroup
 
+	// Iterate through each project to insert it into the database
 	for _, project := range projects {
-		// Increment the counter for the WaitGroup
 		wg.Add(1)
 
-		// Use a goroutine to insert each project concurrently
 		go func(project entities.Project) {
-			defer wg.Done() // Decrement the counter when the goroutine completes
+			defer wg.Done()
 
 			// Insert project into the database
 			_, err := db.Exec(`
@@ -43,7 +42,7 @@ func SeedProjects(db *sql.DB) error {
 			}
 			log.Printf("Successfully inserted project %s\n", project.Name)
 
-			// Fetch the inserted project ID to associate users and tasks
+			// Fetch the inserted project ID
 			var projectId int
 			err = db.QueryRow(`SELECT id FROM projects WHERE name = $1`, project.Name).Scan(&projectId)
 			if err != nil {
@@ -51,49 +50,43 @@ func SeedProjects(db *sql.DB) error {
 				return
 			}
 
-			// Ensure all users exist before associating them with the project
-			for _, user := range project.Users {
-				// Check if the user exists in the users table
-				var userId int
-				err := db.QueryRow(`SELECT id FROM users WHERE id = $1`, user.ID).Scan(&userId)
-				if err != nil {
-					log.Printf("User ID %d does not exist in users table: %v\n", user.ID, err)
-					continue // Skip this user if not found
-				}
+			// Fetch all users (or filter based on criteria) for association with the project
+			users := []entities.User{}
+			rows, err := db.Query(`SELECT id FROM users`)
+			if err != nil {
+				log.Printf("Failed to fetch users: %v\n", err)
+				return
+			}
+			defer rows.Close()
 
-				// Insert project-user associations
+			for rows.Next() {
+				var user entities.User
+				if err := rows.Scan(&user.ID); err != nil {
+					log.Printf("Failed to scan user: %v\n", err)
+					continue
+				}
+				users = append(users, user)
+			}
+
+			// Ensure no errors occurred during iteration over rows
+			if err := rows.Err(); err != nil {
+				log.Printf("Error iterating over users: %v\n", err)
+				return
+			}
+
+			// Insert project-user associations
+			for _, user := range users {
+				// Insert project-user association into the users_projects table
 				_, err = db.Exec(`
 					INSERT INTO users_projects (project_id, user_id) 
 					VALUES ($1, $2)
-				`, projectId, userId)
+				`, projectId, user.ID)
 
 				if err != nil {
-					log.Printf("Failed to associate user %d with project %d: %v\n", userId, projectId, err)
-					return
+					log.Printf("Failed to associate user %d with project %d: %v\n", user.ID, projectId, err)
+					continue
 				}
-				log.Printf("Successfully associated user %d with project %d\n", userId, projectId)
-			}
-
-			// Insert project-task associations
-			for _, task := range project.Tasks {
-				// Check if the task exists in the tasks table
-				var taskId int
-				err := db.QueryRow(`SELECT id FROM tasks WHERE id = $1`, task.ID).Scan(&taskId)
-				if err != nil {
-					log.Printf("Task ID %d does not exist in tasks table: %v\n", task.ID, err)
-					continue // Skip this task if not found
-				}
-
-				_, err = db.Exec(`
-					INSERT INTO project_tasks (project_id, task_id)
-					VALUES ($1, $2)
-				`, projectId, taskId)
-
-				if err != nil {
-					log.Printf("Failed to associate task %d with project %d: %v\n", taskId, projectId, err)
-					return
-				}
-				log.Printf("Successfully associated task %d with project %d\n", taskId, projectId)
+				log.Printf("Successfully associated user %d with project %d\n", user.ID, projectId)
 			}
 		}(project)
 	}

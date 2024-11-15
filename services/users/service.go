@@ -25,6 +25,7 @@ func (h *Handler) handleGetUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := h.store.GetUsers()
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -32,7 +33,28 @@ func (h *Handler) handleGetUsers(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"data": users})
 }
 
-func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) handleGetUser(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	str, ok := vars["userId"]
+	if !ok {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing user Id"))
+		return
+	}
+	userId, err := strconv.Atoi(str)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid user ID"))
+		return
+	}
+
+	user, err := h.store.GetUserById(userId)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+	utils.WriteJSON(w, http.StatusOK, user)
+}
+
+func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	var payload entities.UserRegisterPayload
 
 	if err := utils.ParseJSON(r, &payload); err != nil {
@@ -71,43 +93,6 @@ func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.WriteJSON(w, http.StatusCreated, nil)
-}
-
-func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	str, ok := vars["userId"]
-	if !ok {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing user Id"))
-		return
-	}
-	userId, err := strconv.Atoi(str)
-	if err != nil {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid user Id"))
-		return
-	}
-	now := time.Now()
-	err = h.store.UpdateLastActiveTime(userId, now)
-}
-
-func (h *Handler) handleGetUser(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	str, ok := vars["userId"]
-	if !ok {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing user Id"))
-		return
-	}
-	userId, err := strconv.Atoi(str)
-	if err != nil {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid user ID"))
-		return
-	}
-
-	user, err := h.store.GetUserById(userId)
-	if err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, err)
-		return
-	}
-	utils.WriteJSON(w, http.StatusOK, user)
 }
 
 func (h *Handler) HandleUpdateUser(w http.ResponseWriter, r *http.Request) {
@@ -177,4 +162,20 @@ func (h *Handler) HandleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.WriteJSON(w, http.StatusNoContent, nil)
+}
+
+func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	str, ok := vars["userId"]
+	if !ok {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing user Id"))
+		return
+	}
+	userId, err := strconv.Atoi(str)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid user Id"))
+		return
+	}
+	now := time.Now()
+	err = h.store.UpdateLastActiveTime(userId, now)
 }
