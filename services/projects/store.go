@@ -194,7 +194,7 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 			&project.ID, &project.Name, &project.Description, &project.CreatedAt, &project.UpdatedAt, &project.DeletedAt,
 
 			&taskID, &task.Title, &task.SubTask, &task.Description, &task.StatusID,
-			&task.UserId, &task.CreatedAt, &task.UpdatedAt, &task.DeletedAt,
+			&task.UserID, &task.CreatedAt, &task.UpdatedAt, &task.DeletedAt,
 
 			&statusID, &status.Name, &status.Description, &status.CreatedAt,
 			&status.UpdatedAt, &status.DeletedAt,
