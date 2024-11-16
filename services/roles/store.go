@@ -43,7 +43,7 @@ func (s *Store) GetRoles() ([]*entities.Role, error) {
 }
 
 func (s *Store) GetRole(id int) (*entities.Role, error) {
-	rows, err := s.db.Query("Select * FROM roles WHERE id = $1", id)
+	rows, err := s.db.Query("Select * FROM roles WHERE id = $1", id) // TODO: CHANGE THE METHOD OF THIS
 	if err != nil {
 		return nil, err
 	}

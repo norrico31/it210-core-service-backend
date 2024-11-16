@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/go-playground/validator"
 	"github.com/gorilla/mux"
 	"github.com/norrico31/it210-core-service-backend/entities"
 	"github.com/norrico31/it210-core-service-backend/utils"
@@ -50,6 +51,30 @@ func (h *Handler) handleGetTask(w http.ResponseWriter, r *http.Request) {
 		utils.WriteError(w, http.StatusNotFound, err)
 		return
 	}
+	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"data": task})
+
+}
+
+func (h *Handler) handleTaskCreate(w http.ResponseWriter, r *http.Request) {
+	payload := entities.TaskCreatePayload{}
+
+	if err := utils.ParseJSON(r, &payload); err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	if err := utils.Validate.Struct(payload); err != nil {
+		errs := err.(validator.ValidationErrors)
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload %v", errs))
+		return
+	}
+
+	task, err := h.store.TaskCreate(payload)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
 	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"data": task})
 
 }
