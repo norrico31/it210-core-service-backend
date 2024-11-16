@@ -1,9 +1,9 @@
-// cmd/seed/seeders/status_seeder.go
 package seeders
 
 import (
 	"database/sql"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/norrico31/it210-core-service-backend/entities"
@@ -31,19 +31,32 @@ func SeedStatuses(db *sql.DB) error {
 		// Add more statuses as needed
 	}
 
-	// Insert each status into the database
+	// Use a WaitGroup to wait for all goroutines to finish
+	var wg sync.WaitGroup
 	for _, status := range statuses {
-		_, err := db.Exec(`
-			INSERT INTO statuses (name, description, createdAt, updatedAt)
-			VALUES ($1, $2, $3, $4)
-		`, status.Name, status.Description, time.Now(), time.Now())
+		// Increment the counter for the WaitGroup
+		wg.Add(1)
 
-		if err != nil {
-			log.Printf("Failed to insert status %s: %v\n", status.Name, err)
-			return err
-		}
-		log.Printf("Successfully inserted status %s\n", status.Name)
+		// Use a goroutine to insert each status concurrently
+		go func(status entities.Status) {
+			defer wg.Done() // Decrement the counter when the goroutine completes
+
+			// Insert status into the database
+			_, err := db.Exec(`
+				INSERT INTO statuses (name, description, createdAt, updatedAt)
+				VALUES ($1, $2, $3, $4)
+			`, status.Name, status.Description, time.Now(), time.Now())
+
+			if err != nil {
+				log.Printf("Failed to insert status %s: %v\n", status.Name, err)
+				return
+			}
+			log.Printf("Successfully inserted status %s\n", status.Name)
+		}(status)
 	}
+
+	// Wait for all goroutines to finish
+	wg.Wait()
 
 	return nil
 }

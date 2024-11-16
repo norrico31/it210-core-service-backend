@@ -2,7 +2,6 @@ package seeders
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -12,7 +11,6 @@ import (
 )
 
 func SeedUsers(db *sql.DB) {
-	fmt.Println("DAPAT MAG RURUN TO DIBA")
 	hashPassword := func(password string) string {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 		if err != nil {
