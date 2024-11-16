@@ -20,7 +20,16 @@ func NewHandler(store entities.ProjectStore) *Handler {
 }
 
 func (h *Handler) handleGetProjects(w http.ResponseWriter, r *http.Request) {
-	projects, err := h.store.GetProjects()
+	projects, err := h.store.GetProjects("IS NULL")
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"data": projects})
+}
+
+func (h *Handler) handleGetProjectDeleted(w http.ResponseWriter, r *http.Request) {
+	projects, err := h.store.GetProjects("IS NOT NULL")
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
 	}
@@ -44,7 +53,7 @@ func (h *Handler) handleGetProject(w http.ResponseWriter, r *http.Request) {
 
 	proj, err := h.store.GetProject(projectId)
 	if err != nil {
-		utils.WriteError(w, http.StatusBadRequest, err)
+		utils.WriteError(w, http.StatusNotFound, err)
 		return
 	}
 
@@ -90,7 +99,7 @@ func (h *Handler) handleProjectUpdate(w http.ResponseWriter, r *http.Request) {
 
 	_, err = h.store.GetProject(projectId)
 	if err != nil {
-		utils.WriteError(w, http.StatusBadRequest, err)
+		utils.WriteError(w, http.StatusNotFound, err)
 		return
 	}
 
@@ -114,4 +123,64 @@ func (h *Handler) handleProjectUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.WriteJSON(w, http.StatusOK, newProj)
+}
+
+func (h *Handler) handleProjectDelete(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	str, ok := vars["projectId"]
+	if !ok {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid project ID"))
+		return
+	}
+
+	projectId, err := strconv.Atoi(str)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid project ID"))
+		return
+	}
+
+	existProj, err := h.store.GetProject(projectId)
+	if err != nil {
+		utils.WriteError(w, http.StatusNotFound, err)
+		return
+	}
+
+	project, err := h.store.ProjectDelete(existProj.ID)
+
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"msg": "Delete Project Successfully", "data": project})
+}
+
+func (h *Handler) handleProjectRestore(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	str, ok := vars["projectId"]
+	if !ok {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid project ID"))
+		return
+	}
+
+	projectId, err := strconv.Atoi(str)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid project ID"))
+		return
+	}
+
+	existProj, err := h.store.GetProject(projectId)
+	if err != nil {
+		utils.WriteError(w, http.StatusNotFound, err)
+		return
+	}
+
+	project, err := h.store.ProjectRestore(existProj.ID)
+
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"msg": "Restore Project Successfully!", "data": project})
 }

@@ -3,10 +3,12 @@ package entities
 import "time"
 
 type ProjectStore interface {
-	GetProjects() ([]*Project, error)
+	GetProjects(string) ([]*Project, error)
 	GetProject(int) (*Project, error)
 	ProjectCreate(ProjectCreatePayload) (*Project, error)
 	ProjectUpdate(ProjectUpdatePayload) (*Project, error)
+	ProjectDelete(int) (*Project, error)
+	ProjectRestore(int) (*Project, error)
 }
 
 type Project struct {
