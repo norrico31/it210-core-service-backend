@@ -4,7 +4,9 @@ import "time"
 
 type ProjectStore interface {
 	GetProjects() ([]*Project, error)
+	GetProject(int) (*Project, error)
 	ProjectCreate(ProjectCreatePayload) (*Project, error)
+	ProjectUpdate(ProjectUpdatePayload) (*Project, error)
 }
 
 type Project struct {
@@ -14,8 +16,8 @@ type Project struct {
 	CreatedAt   time.Time  `json:"createdAt"`
 	UpdatedAt   time.Time  `json:"updatedAt"`
 	DeletedAt   *time.Time `json:"deletedAt"`
-	Users       []User     `json:"users,omitempty"`
-	Tasks       []Task     `json:"tasks,omitempty"`
+	Users       []User     `json:"users"`
+	Tasks       []Task     `json:"tasks"`
 }
 
 type ProjectCreatePayload struct {

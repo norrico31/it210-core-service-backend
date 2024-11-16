@@ -3,8 +3,10 @@ package projects
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/go-playground/validator"
+	"github.com/gorilla/mux"
 	"github.com/norrico31/it210-core-service-backend/entities"
 	"github.com/norrico31/it210-core-service-backend/utils"
 )
@@ -24,6 +26,29 @@ func (h *Handler) handleGetProjects(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"data": projects})
+}
+
+func (h *Handler) handleGetProject(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	str, ok := vars["projectId"]
+	if !ok {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid project ID"))
+		return
+	}
+
+	projectId, err := strconv.Atoi(str)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid project Id"))
+		return
+	}
+
+	proj, err := h.store.GetProject(projectId)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, proj)
 }
 
 func (h *Handler) handleProjectCreate(w http.ResponseWriter, r *http.Request) {
@@ -47,4 +72,46 @@ func (h *Handler) handleProjectCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.WriteJSON(w, http.StatusCreated, proj)
+}
+
+func (h *Handler) handleProjectUpdate(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	str, ok := vars["projectId"]
+	if !ok {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid project ID"))
+		return
+	}
+
+	projectId, err := strconv.Atoi(str)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid project Id"))
+		return
+	}
+
+	_, err = h.store.GetProject(projectId)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	payload := entities.ProjectUpdatePayload{}
+
+	if err := utils.ParseJSON(r, &payload); err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	updateProject := entities.ProjectUpdatePayload{
+		ID:          projectId,
+		Name:        payload.Name,
+		Description: payload.Description,
+	}
+
+	newProj, err := h.store.ProjectUpdate(updateProject)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, newProj)
 }

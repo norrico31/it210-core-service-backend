@@ -120,7 +120,7 @@ func (s *Store) GetUsers() ([]*entities.User, error) {
 }
 
 func (s *Store) GetUserById(id int) (*entities.User, error) {
-	rows, err := s.db.Query("SELECT * FROM users WHERE id = ?", id)
+	rows, err := s.db.Query("SELECT * FROM users WHERE id = $1", id)
 	if err != nil {
 		return nil, err
 	}
