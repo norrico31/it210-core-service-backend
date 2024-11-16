@@ -26,7 +26,8 @@ func NewPostgresStorage() (*sql.DB, error) {
 	return db, nil
 }
 
-// sudo psql -U postgres -d it210
+// sudo i- - postgres -d it210
+// psql
 // \dt
 // \l
 // \q
