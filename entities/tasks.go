@@ -8,6 +8,7 @@ import (
 
 type TaskStore interface {
 	GetTasks() ([]*Task, error)
+	GetTask(int) (*Task, error)
 }
 
 type Task struct {
