@@ -7,6 +7,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/norrico31/it210-core-service-backend/config"
+	"github.com/norrico31/it210-core-service-backend/services/projects"
 	"github.com/norrico31/it210-core-service-backend/services/roles"
 	"github.com/norrico31/it210-core-service-backend/services/users"
 )
@@ -69,6 +70,10 @@ func (s *APIServer) Run() error {
 	usersStore := users.NewStore(s.db)
 	usersHandler := users.NewHandler(usersStore)
 	users.RegisterRoutes(subrouterv1, usersHandler)
+
+	projectStore := projects.NewStore(s.db)
+	projecthandler := projects.NewHandler(projectStore)
+	projects.RegisterRoutes(subrouterv1, projecthandler)
 
 	log.Println("Core Service: Running on port ", s.addr)
 	return http.ListenAndServe(s.addr, router)
