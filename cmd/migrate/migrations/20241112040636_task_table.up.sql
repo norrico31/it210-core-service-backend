@@ -10,5 +10,7 @@ CREATE TABLE IF NOT EXISTS tasks (
         projectId INT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        deletedAt TIMESTAMP
+        deletedAt TIMESTAMP,
+        deletedBy INT REFERENCES users(id) ON DELETE
+    SET NULL
 );

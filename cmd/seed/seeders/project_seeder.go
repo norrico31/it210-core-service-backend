@@ -12,12 +12,12 @@ import (
 func SeedProjects(db *sql.DB) error {
 	projects := []entities.Project{
 		{
-			Name:        "Project Alpha",
-			Description: "Description for Project Alpha",
+			Name:        "Project 124 Interpreter",
+			Description: "Description for Project 124 nakakaiyak",
 		},
 		{
-			Name:        "Project Beta",
-			Description: "Description for Project Beta",
+			Name:        "Project 210 Web App DOSTV",
+			Description: "Description for web app dostv chill lang",
 		},
 	}
 

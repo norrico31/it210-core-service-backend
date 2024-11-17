@@ -4,5 +4,7 @@ CREATE TABLE IF NOT EXISTS projects (
     description TEXT,
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    deletedAt TIMESTAMP
+    deletedAt TIMESTAMP,
+    deletedBy INT REFERENCES users(id) ON DELETE
+    SET NULL
 );

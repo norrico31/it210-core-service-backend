@@ -9,6 +9,7 @@ import (
 	"github.com/norrico31/it210-core-service-backend/config"
 	"github.com/norrico31/it210-core-service-backend/services/projects"
 	"github.com/norrico31/it210-core-service-backend/services/roles"
+	"github.com/norrico31/it210-core-service-backend/services/tasks"
 	"github.com/norrico31/it210-core-service-backend/services/users"
 )
 
@@ -70,6 +71,10 @@ func (s *APIServer) Run() error {
 	usersStore := users.NewStore(s.db)
 	usersHandler := users.NewHandler(usersStore)
 	users.RegisterRoutes(subrouterv1, usersHandler)
+
+	taskStore := tasks.NewStore(s.db)
+	taskHandler := tasks.NewHandler(taskStore)
+	tasks.RegisterRoutes(subrouterv1, taskHandler)
 
 	projectStore := projects.NewStore(s.db)
 	projecthandler := projects.NewHandler(projectStore)

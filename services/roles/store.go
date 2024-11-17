@@ -17,7 +17,6 @@ func NewStore(db *sql.DB) *Store {
 }
 
 func (s *Store) GetRoles() ([]*entities.Role, error) {
-	fmt.Println("GET ROLES")
 	rows, err := s.db.Query(`SELECT * FROM roles WHERE deletedAt IS NULL`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query roles: %v", err)
@@ -44,7 +43,7 @@ func (s *Store) GetRoles() ([]*entities.Role, error) {
 }
 
 func (s *Store) GetRole(id int) (*entities.Role, error) {
-	rows, err := s.db.Query("Select * FROM roles WHERE id = $1", id)
+	rows, err := s.db.Query("Select * FROM roles WHERE id = $1", id) // TODO: CHANGE THE METHOD OF THIS
 	if err != nil {
 		return nil, err
 	}
