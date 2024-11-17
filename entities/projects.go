@@ -20,6 +20,7 @@ type Project struct {
 	DeletedAt   *time.Time `json:"deletedAt"`
 	Users       []User     `json:"users"`
 	Tasks       []Task     `json:"tasks"`
+	DeletedBy   *int       `json:"deletedBy"`
 }
 
 type ProjectCreatePayload struct {

@@ -15,7 +15,6 @@ type TaskStore interface {
 	TaskRestore(int) (*Task, error)
 }
 
-// TODO: IN DB TABLE MAKE THE USERID AND STATUSID NULLABLE AND PROJECTID
 type Task struct {
 	ID          int        `json:"id"`
 	Title       string     `json:"title"`

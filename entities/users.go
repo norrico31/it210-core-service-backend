@@ -25,6 +25,7 @@ type User struct {
 	UpdatedAt    time.Time  `json:"updatedAt"`
 	DeletedAt    *time.Time `json:"deletedAt"`
 	Projects     []Project  `json:"projects"`
+	DeletedBy    *int       `json:"deletedBy"`
 }
 
 // USER MUST HAVE A TEAMS
