@@ -179,7 +179,7 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 		LEFT JOIN 
 			users up_user ON up.user_id = up_user.id
 		WHERE 
-			p.id = $1
+			p.id = $1 AND p.deletedAt IS NULL
 	`
 
 	rows, err := s.db.Query(query, id)
@@ -362,6 +362,7 @@ func (s *Store) ProjectRestore(id int) (*entities.Project, error) {
 		return nil, err
 	}
 
+	fmt.Println("hala?")
 	proj := entities.Project{}
 	err = tx.QueryRow("UPDATE projects SET deletedAt = NULL WHERE id = $1 RETURNING id, name, description, createdAt, updatedAt, deletedAt", id).Scan(
 		&proj.ID,
@@ -371,7 +372,6 @@ func (s *Store) ProjectRestore(id int) (*entities.Project, error) {
 		&proj.UpdatedAt,
 		&proj.DeletedAt,
 	)
-	fmt.Println("hala?")
 	if err != nil {
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
 			return nil, fmt.Errorf("error restoring: %v rollback error: %v", err, rollbackErr)

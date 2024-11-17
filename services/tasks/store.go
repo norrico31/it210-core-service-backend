@@ -225,33 +225,52 @@ func (s *Store) TaskCreate(payload entities.TaskCreatePayload) (*entities.Task, 
 }
 
 func (s *Store) GetTask(id int) (*entities.Task, error) {
-	query := fmt.Sprintf(`SELECT * FROM tasks WHERE id = %v`, id)
-	row := s.db.QueryRow(query)
+	query := fmt.Sprintf(`
+        SELECT t.id, t.title, t.description, t.statusId, t.userId, t.projectId, t.createdAt, t.updatedAt, t.deletedAt, t.deletedBy,
+			s.id AS status_id, s.name AS status_name, s.description AS status_description, s.createdAt AS status_createdAt, s.updatedAt AS status_updatedAt, s.deletedAt AS status_deletedAt,
+			u.id AS user_id, u.firstName, u.lastName, u.email, u.age, u.lastActiveAt, u.createdAt AS user_createdAt, u.updatedAt AS user_updatedAt, u.deletedAt AS user_deletedAt,
+			p.id AS project_id, p.name AS project_name, p.description AS project_description, p.createdAt AS project_createdAt, p.updatedAt AS project_updatedAt, p.deletedAt AS project_deletedAt
+			FROM tasks t
+			LEFT JOIN statuses s ON s.id = t.statusId
+			LEFT JOIN users u ON u.id = t.userId
+			LEFT JOIN projects p ON p.id = t.projectId
+			WHERE t.id = $1 AND t.deletedAt IS NULL
+    `)
+
+	row := s.db.QueryRow(query, id)
 
 	task := &entities.Task{}
+	var status entities.Status
+	var user entities.User
+	var project entities.Project
 
 	err := row.Scan(
-		&task.ID,
-		&task.Title,
-		&task.SubTask,
-		&task.Description,
-		&task.StatusID,
-		&task.UserID,
-		&task.ProjectID,
-		&task.CreatedAt,
-		&task.UpdatedAt,
-		&task.DeletedAt,
+		&task.ID, &task.Title, &task.Description, &task.StatusID, &task.UserID, &task.ProjectID, &task.CreatedAt,
+		&task.UpdatedAt, &task.DeletedAt, &task.DeletedBy,
+		// Status
+		&status.ID, &status.Name, &status.Description, &status.CreatedAt, &status.UpdatedAt, &status.DeletedAt,
+		// User
+		&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Age, &user.LastActiveAt, &user.CreatedAt,
+		&user.UpdatedAt, &user.DeletedAt,
+		// Project
+		&project.ID, &project.Name, &project.Description, &project.CreatedAt, &project.UpdatedAt, &project.DeletedAt,
 	)
+
 	if err != nil {
-		return nil, fmt.Errorf("task ID not found")
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("task with ID %d not found", id)
+		}
+		return nil, fmt.Errorf("failed to retrieve task: %v", err)
 	}
 
-	if task.ID == 0 {
-		return nil, fmt.Errorf("task ID not found ")
-	}
+	// Assign the related entities for the task
+	task.Status = status
+	task.User = user
+	task.Project = project
 
 	return task, nil
 }
+
 func (s *Store) TaskUpdate(payload entities.TaskUpdatePayload) (*entities.Task, error) {
 	return nil, nil
 }
@@ -263,10 +282,9 @@ func (s *Store) TaskDelete(id int) (*entities.Task, error) {
 	}
 
 	task := &entities.Task{}
-	err = tx.QueryRow("UPDATE tasks SET deletedAt = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id, title, subTask, description, statusId, userId, projectId, createdAt, updatedAt, deletedAt", id).Scan(
+	err = tx.QueryRow("UPDATE tasks SET deletedAt = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id, title, description, statusId, userId, projectId, createdAt, updatedAt, deletedAt", id).Scan(
 		&task.ID,
 		&task.Title,
-		&task.SubTask,
 		&task.Description,
 		&task.StatusID,
 		&task.UserID,

@@ -169,13 +169,9 @@ func (h *Handler) handleProjectRestore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existProj, err := h.store.GetProject(projectId)
-	if err != nil {
-		utils.WriteError(w, http.StatusNotFound, err)
-		return
-	}
+	fmt.Println("di ba napasok dito?")
 
-	project, err := h.store.ProjectRestore(existProj.ID)
+	project, err := h.store.ProjectRestore(projectId)
 
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
