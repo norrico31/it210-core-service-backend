@@ -28,6 +28,14 @@ func SeedStatuses(db *sql.DB) error {
 			Name:        "Archived",
 			Description: "The task or project is archived and no longer active.",
 		},
+		{
+			Name:        "Not Started",
+			Description: "The task or project is not yet started.",
+		},
+		{
+			Name:        "In Progress",
+			Description: "The task or project is currently in progress.",
+		},
 		// Add more statuses as needed
 	}
 

@@ -2,7 +2,6 @@ package seeders
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -11,112 +10,131 @@ import (
 )
 
 func SeedTasks(db *sql.DB) error {
-	userIds := make(map[string]int)
+	// Fetch statuses
+	statuses := make(map[string]int)
+	statusRows, err := db.Query("SELECT id, name FROM statuses")
+	if err != nil {
+		log.Printf("Failed to fetch statuses: %v\n", err)
+		return err
+	}
+	defer statusRows.Close()
 
-	// Fetch user data
-	rows, err := db.Query("SELECT id, firstName FROM users")
+	for statusRows.Next() {
+		var id int
+		var name string
+		if err := statusRows.Scan(&id, &name); err != nil {
+			log.Printf("Failed to scan status: %v\n", err)
+			return err
+		}
+		statuses[name] = id
+	}
+
+	// Fetch users
+	users := map[string]int{}
+	userRows, err := db.Query("SELECT id, firstName FROM users")
 	if err != nil {
 		log.Printf("Failed to fetch users: %v\n", err)
 		return err
 	}
-	defer rows.Close()
+	defer userRows.Close()
 
-	// Map user firstNames to user IDs
-	for rows.Next() {
+	for userRows.Next() {
 		var id int
 		var firstName string
-		if err := rows.Scan(&id, &firstName); err != nil {
+		if err := userRows.Scan(&id, &firstName); err != nil {
 			log.Printf("Failed to scan user: %v\n", err)
 			return err
 		}
-		userIds[firstName] = id
+		users[firstName] = id
 	}
 
-	if err := rows.Err(); err != nil {
-		log.Printf("Failed to iterate users: %v\n", err)
+	// Fetch projects
+	projects := make(map[string]int)
+	projectRows, err := db.Query("SELECT id, name FROM projects")
+	if err != nil {
+		log.Printf("Failed to fetch projects: %v\n", err)
 		return err
 	}
+	defer projectRows.Close()
 
-	// Sample data for seeding
+	for projectRows.Next() {
+		var id int
+		var name string
+		if err := projectRows.Scan(&id, &name); err != nil {
+			log.Printf("Failed to scan project: %v\n", err)
+			return err
+		}
+		projects[name] = id
+	}
+
+	user1 := users["Chester"]
+	user2 := users["Mary Grace"]
+
+	proj1 := projects["Project 124 Interpreter"]
+	proj12 := projects["Project 210 Web App DOSTV"]
+
+	// Sample task data
 	tasks := []entities.Task{
 		{
 			Title:       "Design Database Schema",
-			SubTask:     []string{"Define ER model", "Setup tables", "Define constraints"},
-			Description: "desc 1",
-			StatusID:    1,
-			UserId:      userIds["Chester"], // change this for prod
-			Projects:    []entities.Project{{ID: 1}},
+			Description: "Design the database schema for the project.",
+			StatusID:    statuses["In Progress"],
+			UserID:      &user1,
+			ProjectID:   proj12,
+			SubTask: []entities.SubTask{
+				{Title: "Define ER model", StatusID: statuses["Not Started"]},
+				{Title: "Setup tables", StatusID: statuses["In Progress"]},
+				{Title: "Define constraints", StatusID: statuses["Completed"]},
+			},
 		},
 		{
 			Title:       "Develop API Endpoints",
-			SubTask:     []string{"Setup router", "Create handlers", "Write tests"},
-			Description: "desc 2",
-			StatusID:    2,
-			UserId:      userIds["Mary Grace"], // change this for prod
-			Projects:    []entities.Project{{ID: 1}},
+			Description: "Develop all required API endpoints.",
+			StatusID:    statuses["In Progress"],
+			UserID:      &user2,
+			ProjectID:   proj1,
+			SubTask: []entities.SubTask{
+				{Title: "Setup router", StatusID: statuses["Not Started"]},
+				{Title: "Create handlers", StatusID: statuses["In Progress"]},
+				{Title: "Write tests", StatusID: statuses["Not Started"]},
+			},
 		},
 	}
 
-	// Use a WaitGroup to wait for all goroutines to finish
 	var wg sync.WaitGroup
+
 	for _, task := range tasks {
-		// Increment the counter for the WaitGroup
 		wg.Add(1)
-
 		go func(task entities.Task) {
-			defer wg.Done() // Decrement the counter when the goroutine completes
+			defer wg.Done()
 
-			// Convert subtask array to PostgreSQL array format
-			subTaskArray := "{" + fmt.Sprintf("'%s'", task.SubTask[0])
-			for _, sub := range task.SubTask[1:] {
-				subTaskArray += fmt.Sprintf(", '%s'", sub)
-			}
-			subTaskArray += "}"
-
-			// Ensure projectId is set correctly as it's a NOT NULL field
-			if len(task.Projects) == 0 || task.Projects[0].ID == 0 {
-				log.Printf("Task %s has no valid projectId set. Skipping task.\n", task.Title)
-				return
-			}
-
-			// Insert task into the database with projectId
-			_, err := db.Exec(`
-				INSERT INTO tasks (title, subTask, description, statusId, userId, projectId, createdAt, updatedAt)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-			`, task.Title, subTaskArray, task.Description, task.StatusID, task.UserId, task.Projects[0].ID, time.Now(), time.Now())
-
+			// Insert task
+			var taskID int
+			err := db.QueryRow(`
+				INSERT INTO tasks (title, description, statusId, userId, projectId, createdAt, updatedAt)
+				VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
+			`, task.Title, task.Description, task.StatusID, task.UserID, task.ProjectID, time.Now(), time.Now()).Scan(&taskID)
 			if err != nil {
 				log.Printf("Failed to insert task %s: %v\n", task.Title, err)
 				return
 			}
-			log.Printf("Successfully inserted task %s\n", task.Title)
+			log.Printf("Inserted task: %s with ID: %d\n", task.Title, taskID)
 
-			// Fetch the inserted task ID to associate it with projects
-			var taskId int
-			err = db.QueryRow(`SELECT id FROM tasks WHERE title = $1`, task.Title).Scan(&taskId)
-			if err != nil {
-				log.Printf("Failed to fetch task ID for %s: %v\n", task.Title, err)
-				return
-			}
-
-			// Insert project-task associations (if the Projects slice is populated)
-			for _, project := range task.Projects {
+			// Insert subtasks
+			for _, subTask := range task.SubTask {
 				_, err := db.Exec(`
-					INSERT INTO project_tasks (project_id, task_id)
-					VALUES ($1, $2)
-				`, project.ID, taskId)
-
+					INSERT INTO subtasks (taskId, statusId, title, createdAt, updatedAt)
+					VALUES ($1, $2, $3, $4, $5)
+				`, taskID, subTask.StatusID, subTask.Title, time.Now(), time.Now())
 				if err != nil {
-					log.Printf("Failed to associate task %d with project %d: %v\n", taskId, project.ID, err)
-					return
+					log.Printf("Failed to insert subtask %s for task %s: %v\n", subTask.Title, task.Title, err)
+				} else {
+					log.Printf("Inserted subtask: %s for task: %s\n", subTask.Title, task.Title)
 				}
-				log.Printf("Successfully associated task %d with project %d\n", taskId, project.ID)
 			}
 		}(task)
 	}
 
-	// Wait for all goroutines to finish
 	wg.Wait()
-
 	return nil
 }

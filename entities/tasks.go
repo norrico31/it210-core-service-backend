@@ -17,18 +17,31 @@ type TaskStore interface {
 
 // TODO: IN DB TABLE MAKE THE USERID AND STATUSID NULLABLE AND PROJECTID
 type Task struct {
-	ID          int            `json:"id"`
-	Title       string         `json:"title"`
-	SubTask     pq.StringArray `json:"subTask"` // change subtask to seperate table then associate it here
-	Description string         `json:"description"`
-	StatusID    int            `json:"statusId"`
-	Status      Status         `json:"status"`
-	UserID      *int           `json:"userId"`
-	User        User           `json:"user"`
-	ProjectID   int            `json:"projectId"`
-	CreatedAt   time.Time      `json:"createdAt"`
-	UpdatedAt   time.Time      `json:"updatedAt"`
-	DeletedAt   *time.Time     `json:"deletedAt"`
+	ID          int        `json:"id"`
+	Title       string     `json:"title"`
+	SubTask     []SubTask  `json:"subTask"` // change subtask to seperate table then associate it here
+	Description string     `json:"description"`
+	StatusID    int        `json:"statusId"`
+	Status      Status     `json:"status"`
+	UserID      *int       `json:"userId"`
+	User        User       `json:"user"`
+	ProjectID   int        `json:"projectId"`
+	Project     Project    `json:"project"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	UpdatedAt   time.Time  `json:"updatedAt"`
+	DeletedAt   *time.Time `json:"deletedAt"`
+	DeletedBy   *int       `json:"deletedBy"`
+}
+
+type SubTask struct {
+	ID        int        `json:"id"`
+	TaskID    int        `json:"taskId"`
+	Title     string     `json:"title"`
+	StatusID  int        `json:"statusId"`
+	CreatedAt time.Time  `json:"createdAt"`
+	UpdatedAt time.Time  `json:"updatedAt"`
+	DeletedAt *time.Time `json:"deletedAt"`
+	DeletedBy *int       `json:"deletedBy"`
 }
 
 type TaskCreatePayload struct {
