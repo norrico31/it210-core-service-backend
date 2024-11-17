@@ -7,7 +7,7 @@ import (
 )
 
 type TaskStore interface {
-	GetTasks() ([]*Task, error)
+	GetTasks(string) ([]*Task, error)
 	GetTask(int) (*Task, error)
 	TaskCreate(TaskCreatePayload) (*Task, error)
 	TaskUpdate(TaskUpdatePayload) (*Task, error)

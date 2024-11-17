@@ -16,9 +16,8 @@ func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
 }
 
-func (s *Store) GetTasks() ([]*entities.Task, error) {
-	query := fmt.Sprintf(`SELECT * FROM tasks WHERE deletedAt IS NULL`)
-	fmt.Println("hala")
+func (s *Store) GetTasks(str string) ([]*entities.Task, error) {
+	query := fmt.Sprintf(`SELECT * FROM tasks WHERE deletedAt %v`, str)
 	rows, err := s.db.Query(query)
 
 	if err != nil {

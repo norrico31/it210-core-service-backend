@@ -20,8 +20,19 @@ func NewHandler(store entities.TaskStore) *Handler {
 }
 
 func (h *Handler) handleGetTasks(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("ha")
-	tasks, err := h.store.GetTasks()
+	tasks, err := h.store.GetTasks("IS NULL")
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	w.Header().Set("Content-type", "application/json")
+
+	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"data": tasks})
+}
+
+func (h *Handler) handleGetDeletedTasks(w http.ResponseWriter, r *http.Request) {
+	tasks, err := h.store.GetTasks("IS NOT NULL")
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
 		return
