@@ -312,7 +312,7 @@ func (s *Store) ProjectDelete(id int) (*entities.Project, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("hala")
+
 	proj := entities.Project{}
 	err = tx.QueryRow("UPDATE projects SET deletedAt = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id, name, description, createdAt, updatedAt, deletedAt", id).Scan(
 		&proj.ID,
@@ -322,7 +322,6 @@ func (s *Store) ProjectDelete(id int) (*entities.Project, error) {
 		&proj.UpdatedAt,
 		&proj.DeletedAt,
 	)
-	fmt.Println("hala?")
 
 	if err != nil {
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
@@ -332,7 +331,7 @@ func (s *Store) ProjectDelete(id int) (*entities.Project, error) {
 	}
 
 	if err = tx.Commit(); err != nil {
-		return &proj, nil
+		return nil, err
 	}
 
 	return &proj, err

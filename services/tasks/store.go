@@ -17,10 +17,8 @@ func NewStore(db *sql.DB) *Store {
 }
 
 func (s *Store) GetTasks() ([]*entities.Task, error) {
-	query := fmt.Sprintf(`
-		SELECT * FROM tasks;
-	`)
-
+	query := fmt.Sprintf(`SELECT * FROM tasks WHERE deletedAt IS NULL`)
+	fmt.Println("hala")
 	rows, err := s.db.Query(query)
 
 	if err != nil {
@@ -49,9 +47,7 @@ func (s *Store) GetTasks() ([]*entities.Task, error) {
 }
 
 func (s *Store) GetTask(id int) (*entities.Task, error) {
-	query := fmt.Sprintf(`
-		SELECT * FROM tasks WHERE id = %v
-	`, id)
+	query := fmt.Sprintf(`SELECT * FROM tasks WHERE id = %v`, id)
 	row := s.db.QueryRow(query)
 
 	task := &entities.Task{}
@@ -106,7 +102,7 @@ func (s *Store) TaskCreate(payload entities.TaskCreatePayload) (*entities.Task, 
 		payload.SubTask,
 		payload.Description,
 		payload.StatusID,
-		// If the userId is 0 (i.e., NULL), pass NULL to the query
+		// If the userId is 0 or null, pass NULL to the query
 		func() interface{} {
 			if payload.UserID == 0 {
 				return nil // Allow NULL for userId
@@ -135,6 +131,48 @@ func (s *Store) TaskCreate(payload entities.TaskCreatePayload) (*entities.Task, 
 	}
 
 	return &task, nil
+}
+
+func (s *Store) TaskUpdate(payload entities.TaskUpdatePayload) (*entities.Task, error) {
+	return nil, nil
+}
+
+func (s *Store) TaskDelete(id int) (*entities.Task, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+
+	task := &entities.Task{}
+	err = tx.QueryRow("UPDATE tasks SET deletedAt = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id, title, subTask, description, statusId, userId, projectId, createdAt, updatedAt, deletedAt", id).Scan(
+		&task.ID,
+		&task.Title,
+		&task.SubTask,
+		&task.Description,
+		&task.StatusID,
+		&task.UserID,
+		&task.ProjectID,
+		&task.CreatedAt,
+		&task.UpdatedAt,
+		&task.DeletedAt,
+	)
+	if err != nil {
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			return nil, fmt.Errorf("error deleting : %v, rollback error: %v", err, rollbackErr)
+		}
+
+		return nil, err
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return task, nil
+}
+
+func (s *Store) TaskRestore(id int) (*entities.Task, error) {
+	return nil, nil
 }
 
 // TODO: UPDATE TASK (HOW TO UPDATE SUBTASK(ARRAY OF STRINGS))

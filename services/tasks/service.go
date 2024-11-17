@@ -20,7 +20,7 @@ func NewHandler(store entities.TaskStore) *Handler {
 }
 
 func (h *Handler) handleGetTasks(w http.ResponseWriter, r *http.Request) {
-
+	fmt.Println("ha")
 	tasks, err := h.store.GetTasks()
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
@@ -77,4 +77,48 @@ func (h *Handler) handleTaskCreate(w http.ResponseWriter, r *http.Request) {
 
 	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"data": task})
 
+}
+
+func (h *Handler) handleTaskUpdate(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func (h *Handler) handleTaskDelete(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	str, ok := vars["taskId"]
+	if !ok {
+		utils.WriteError(w, http.StatusNotFound, fmt.Errorf("invalid task ID"))
+		return
+	}
+
+	taskId, err := strconv.Atoi(str)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid task ID"))
+		return
+	}
+
+	existTask, err := h.store.GetTask(taskId)
+	if err != nil {
+		utils.WriteError(w, http.StatusNotFound, err)
+		return
+	}
+
+	task, err := h.store.TaskDelete(existTask.ID)
+
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"msg": "Delete Task Successfully", "data": task})
+
+}
+
+func (h *Handler) handleTaskRestore(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	_, ok := vars["taskId"]
+	if !ok {
+		utils.WriteError(w, http.StatusNotFound, fmt.Errorf("invalid task ID"))
+		return
+	}
 }
