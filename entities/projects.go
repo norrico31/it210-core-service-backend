@@ -12,15 +12,18 @@ type ProjectStore interface {
 }
 
 type Project struct {
-	ID          int        `json:"id"`
-	Name        string     `json:"name"`
-	Description string     `json:"description"`
-	CreatedAt   time.Time  `json:"createdAt"`
-	UpdatedAt   time.Time  `json:"updatedAt"`
-	DeletedAt   *time.Time `json:"deletedAt"`
-	Users       []User     `json:"users"`
-	Tasks       []Task     `json:"tasks"`
-	DeletedBy   *int       `json:"deletedBy"`
+	ID           int        `json:"id"`
+	Name         string     `json:"name"`
+	Description  string     `json:"description"`
+	Progress     float64    `json:"progress"`
+	DateStarted  *time.Time `json:"dateStarted"`
+	DateDeadline *time.Time `json:"dateDeadline"`
+	CreatedAt    time.Time  `json:"createdAt"`
+	UpdatedAt    time.Time  `json:"updatedAt"`
+	DeletedAt    *time.Time `json:"deletedAt"`
+	Users        []User     `json:"users"`
+	Tasks        []Task     `json:"tasks"`
+	DeletedBy    *int       `json:"deletedBy"`
 }
 
 type ProjectCreatePayload struct {

@@ -23,6 +23,7 @@ func (h *Handler) handleGetProjects(w http.ResponseWriter, r *http.Request) {
 	projects, err := h.store.GetProjects("IS NULL")
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
+		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"data": projects})

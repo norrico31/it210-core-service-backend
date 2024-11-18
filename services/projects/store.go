@@ -24,25 +24,44 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 			p.id AS project_id,
 			p.name AS project_name,
 			p.description AS project_description,
+			p.progress AS project_progress,
+			p.dateStarted AS project_date_started,
+			p.dateDeadline AS project_date_deadline,
 			p.createdAt AS project_created_at,
 			p.updatedAt AS project_updated_at,
 			p.deletedAt AS project_deleted_at,
+
 			u.id AS user_id,
 			u.firstName AS user_first_name,
 			u.lastName AS user_last_name,
 			u.email AS user_email,
 			u.age AS user_age,
+
 			u.lastActiveAt AS user_last_active_at,
 			u.createdAt AS user_created_at,
 			u.updatedAt AS user_updated_at,
 			u.deletedAt AS user_deleted_at,
-			u.deletedBy AS user_deleted_by
+			u.deletedBy AS user_deleted_by,
+
+			t.id AS task_id,
+			t.title AS task_title,
+			t.description AS task_description,
+			t.statusId AS task_status_id,
+			t.userId AS task_user_id,
+			t.projectId AS task_project_id,
+			t.createdAt AS task_created_at,
+			t.updatedAt AS task_updated_at,
+			t.deletedAt AS task_deleted_at,
+			t.deletedBy AS task_deleted_by
+			
 		FROM
 			projects p
 		LEFT JOIN
 			users_projects up ON p.id = up.project_id
 		LEFT JOIN
 			users u ON up.user_id = u.id
+		LEFT JOIN
+			tasks t ON t.projectId = p.id
 		WHERE
 			p.deletedAt ` + condition
 
@@ -58,21 +77,29 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 	// Loop through query results
 	for rows.Next() {
 		var projectID int
+		var dateStarted, dateDeadline *time.Time
 		var project entities.Project
 		var user entities.User
+		var task entities.Task
 
 		// Use pointers to handle NULL values
-		var userID *int
+		var userID, userAge, userDeletedBy *int
 		var userFirstName, userLastName, userEmail *string
-		var userAge *int
-		var userDeletedBy *int
 		var userLastActiveAt, userCreatedAt, userUpdatedAt, userDeletedAt *time.Time
 
-		// Scan project and user data
+		// Use pointers for task fields
+		var taskID, taskStatusID, taskUserID, taskProjectID, taskDeletedBy *int
+		var taskTitle, taskDescription *string
+		var taskCreatedAt, taskUpdatedAt, taskDeletedAt *time.Time
+
+		// Scan project, user, and task data
 		err = rows.Scan(
 			&projectID,
 			&project.Name,
 			&project.Description,
+			&project.Progress,
+			&dateStarted,
+			&dateDeadline,
 			&project.CreatedAt,
 			&project.UpdatedAt,
 			&project.DeletedAt,
@@ -86,6 +113,16 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 			&userUpdatedAt,
 			&userDeletedAt,
 			&userDeletedBy,
+			&taskID,
+			&taskTitle,
+			&taskDescription,
+			&taskStatusID,
+			&taskUserID,
+			&taskProjectID,
+			&taskCreatedAt,
+			&taskUpdatedAt,
+			&taskDeletedAt,
+			&taskDeletedBy,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan error: %w", err)
@@ -94,7 +131,10 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 		// If project is not yet in the map, add it
 		if _, exists := projectsMap[projectID]; !exists {
 			project.ID = projectID
-			project.Users = []entities.User{} // Initialize empty users slice
+			project.DateStarted = dateStarted   // Assign dateStarted
+			project.DateDeadline = dateDeadline // Assign dateDeadline
+			project.Users = []entities.User{}   // Initialize empty users slice
+			project.Tasks = []entities.Task{}   // Initialize empty tasks slice
 			projectsMap[projectID] = &project
 		}
 
@@ -113,6 +153,7 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 			if userAge != nil {
 				user.Age = *userAge
 			}
+
 			user.LastActiveAt = userLastActiveAt
 			if userCreatedAt != nil {
 				user.CreatedAt = *userCreatedAt
@@ -125,6 +166,35 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 
 			// Add user to the project's user list
 			projectsMap[projectID].Users = append(projectsMap[projectID].Users, user)
+		}
+
+		// Add task data if available and ensure task is not duplicated for the project
+		if taskID != nil {
+			// Check if the task is already in the project's tasks
+			taskExists := false
+			for _, existingTask := range projectsMap[projectID].Tasks {
+				if existingTask.ID == *taskID {
+					taskExists = true
+					break
+				}
+			}
+
+			// If task doesn't already exist, add it
+			if !taskExists {
+				task.ID = *taskID
+				task.Title = *taskTitle
+				task.Description = *taskDescription
+				task.StatusID = *taskStatusID
+				task.UserID = taskUserID
+				task.ProjectID = *taskProjectID
+				task.CreatedAt = *taskCreatedAt
+				task.UpdatedAt = *taskUpdatedAt
+				task.DeletedAt = taskDeletedAt
+				task.DeletedBy = taskDeletedBy
+
+				// Add task to the project's task list
+				projectsMap[projectID].Tasks = append(projectsMap[projectID].Tasks, task)
+			}
 		}
 	}
 
@@ -205,6 +275,7 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 
 		err := rows.Scan(
 			&project.ID, &project.Name, &project.Description, &project.CreatedAt, &project.UpdatedAt, &project.DeletedAt,
+			&project.Progress,
 
 			&taskID, &task.Title, &task.Description, &task.StatusID,
 			&task.UserID, &task.CreatedAt, &task.UpdatedAt, &task.DeletedAt, &taskDeletedBy,

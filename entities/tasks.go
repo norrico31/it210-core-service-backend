@@ -2,8 +2,6 @@ package entities
 
 import (
 	"time"
-
-	"github.com/lib/pq"
 )
 
 type TaskStore interface {
@@ -18,7 +16,6 @@ type TaskStore interface {
 type Task struct {
 	ID          int        `json:"id"`
 	Title       string     `json:"title"`
-	SubTask     []SubTask  `json:"subTask"` // change subtask to seperate table then associate it here
 	Description string     `json:"description"`
 	StatusID    int        `json:"statusId"`
 	Status      Status     `json:"status"`
@@ -32,32 +29,19 @@ type Task struct {
 	DeletedBy   *int       `json:"deletedBy"`
 }
 
-type SubTask struct {
-	ID        int        `json:"id"`
-	TaskID    int        `json:"taskId"`
-	Title     string     `json:"title"`
-	StatusID  int        `json:"statusId"`
-	CreatedAt time.Time  `json:"createdAt"`
-	UpdatedAt time.Time  `json:"updatedAt"`
-	DeletedAt *time.Time `json:"deletedAt"`
-	DeletedBy *int       `json:"deletedBy"`
-}
-
 type TaskCreatePayload struct {
-	Title       string         `json:"title"`
-	SubTask     pq.StringArray `json:"subTask"`
-	Description string         `json:"description"`
-	StatusID    int            `json:"statusId,omitempty"`
-	UserID      int            `json:"userId,omitempty"`
-	ProjectID   int            `json:"projectId,omitempty"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	StatusID    int    `json:"statusId,omitempty"`
+	UserID      int    `json:"userId,omitempty"`
+	ProjectID   int    `json:"projectId,omitempty"`
 }
 
 type TaskUpdatePayload struct {
-	ID          string         `json:"id"`
-	Title       string         `json:"title"`
-	SubTask     pq.StringArray `json:"subTask"`
-	Description string         `json:"description"`
-	StatusID    int            `json:"statusId,omitempty"`
-	UserID      int            `json:"userId,omitempty"`
-	ProjectID   int            `json:"projectId,omitempty"`
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	StatusID    int    `json:"statusId,omitempty"`
+	UserID      int    `json:"userId,omitempty"`
+	ProjectID   int    `json:"projectId,omitempty"`
 }

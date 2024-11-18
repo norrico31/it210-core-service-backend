@@ -81,11 +81,6 @@ func SeedTasks(db *sql.DB) error {
 			StatusID:    statuses["In Progress"],
 			UserID:      &user1,
 			ProjectID:   proj12,
-			SubTask: []entities.SubTask{
-				{Title: "Define ER model", StatusID: statuses["Not Started"]},
-				{Title: "Setup tables", StatusID: statuses["In Progress"]},
-				{Title: "Define constraints", StatusID: statuses["Completed"]},
-			},
 		},
 		{
 			Title:       "Develop API Endpoints",
@@ -93,11 +88,6 @@ func SeedTasks(db *sql.DB) error {
 			StatusID:    statuses["In Progress"],
 			UserID:      &user2,
 			ProjectID:   proj1,
-			SubTask: []entities.SubTask{
-				{Title: "Setup router", StatusID: statuses["Not Started"]},
-				{Title: "Create handlers", StatusID: statuses["In Progress"]},
-				{Title: "Write tests", StatusID: statuses["Not Started"]},
-			},
 		},
 	}
 
@@ -119,19 +109,6 @@ func SeedTasks(db *sql.DB) error {
 				return
 			}
 			log.Printf("Inserted task: %s with ID: %d\n", task.Title, taskID)
-
-			// Insert subtasks
-			for _, subTask := range task.SubTask {
-				_, err := db.Exec(`
-					INSERT INTO subtasks (taskId, statusId, title, createdAt, updatedAt)
-					VALUES ($1, $2, $3, $4, $5)
-				`, taskID, subTask.StatusID, subTask.Title, time.Now(), time.Now())
-				if err != nil {
-					log.Printf("Failed to insert subtask %s for task %s: %v\n", subTask.Title, task.Title, err)
-				} else {
-					log.Printf("Inserted subtask: %s for task: %s\n", subTask.Title, task.Title)
-				}
-			}
 		}(task)
 	}
 

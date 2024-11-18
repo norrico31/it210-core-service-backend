@@ -1,7 +1,6 @@
 CREATE TABLE IF NOT EXISTS tasks (
     id SERIAL PRIMARY KEY,
     title VARCHAR(100) NOT NULL,
-    subTask TEXT [],
     description TEXT,
     statusId INT NOT NULL REFERENCES statuses(id) ON DELETE
     SET NULL,
