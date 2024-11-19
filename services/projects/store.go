@@ -71,15 +71,15 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 		FROM
 			projects p
 		LEFT JOIN
-			users_projects up ON p.id = up.project_id
+			users_projects up ON up.deletedAt IS NULL AND p.id = up.project_id
 		LEFT JOIN
-			users u ON up.user_id = u.id
+			users u ON up.deletedAt IS NULL AND up.user_id = u.id
 		LEFT JOIN
-			tasks t ON t.projectId = p.id
+			tasks t ON t.deletedAt IS NULL AND t.projectId = p.id
 		LEFT JOIN
-			statuses s ON s.id = t.statusId
+			statuses s ON s.deletedAt IS NULL AND s.id = t.statusId
 		LEFT JOIN
-			users ut ON ut.id = t.userId
+			users ut ON ut.deletedAt IS NULL AND ut.id = t.userId
 		WHERE
 			p.deletedAt ` + condition
 
@@ -270,7 +270,7 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 			p.createdAt AS project_created_at,
  			p.updatedAt AS project_updated_at,
  			p.deletedAt AS project_deleted_at,
-			p.deletedBy project_deleted_by,
+			p.deletedBy AS project_deleted_by,
 
 			u.id AS user_id,
 			u.firstName AS user_first_name,
@@ -315,7 +315,7 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 		LEFT JOIN
 			users u ON up.user_id = u.id
 		LEFT JOIN
-			tasks t ON t.projectId = p.id
+			tasks t ON t.deletedAt IS NULL AND t.projectId = p.id
 		LEFT JOIN
 			statuses s ON s.id = t.statusId
 		LEFT JOIN
