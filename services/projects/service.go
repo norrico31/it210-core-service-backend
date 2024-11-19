@@ -41,6 +41,7 @@ func (h *Handler) handleGetProjectDeleted(w http.ResponseWriter, r *http.Request
 func (h *Handler) handleGetProject(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	str, ok := vars["projectId"]
+	fmt.Println("hala single")
 	if !ok {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid project ID"))
 		return
@@ -51,7 +52,6 @@ func (h *Handler) handleGetProject(w http.ResponseWriter, r *http.Request) {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid project Id"))
 		return
 	}
-
 	proj, err := h.store.GetProject(projectId)
 	if err != nil {
 		utils.WriteError(w, http.StatusNotFound, err)
