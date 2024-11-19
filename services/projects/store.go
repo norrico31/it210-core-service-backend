@@ -100,6 +100,8 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 		var user entities.User
 		var task entities.Task
 		var status entities.Status
+		var statusId *int
+		var statusName, statusDescription *string
 
 		// Use pointers to handle NULL values
 		var userID, userAge, userDeletedBy *int
@@ -125,7 +127,7 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 
 			&taskID, &taskTitle, &taskDescription, &taskStatusID, &taskUserID, &taskProjectID, &taskCreatedAt, &taskUpdatedAt, &taskDeletedAt, &taskDeletedBy,
 
-			&status.ID, &status.Name, &status.Description,
+			&statusId, &statusName, &statusDescription,
 
 			&userIDTask, &taskUserFirstName, &taskUserLastName, &taskUserEmail, &taskUserAge, &taskUserLastActiveAt, &taskUserCreatedAt, &taskUserUpdatedAt, &taskUserDeletedAt, &taskUserDeletedBy,
 		)
@@ -171,6 +173,18 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 
 			// Add user to the project's user list
 			projectsMap[projectID].Users = append(projectsMap[projectID].Users, user)
+		}
+
+		if statusId != nil {
+			status.ID = *statusId
+		}
+
+		if statusName != nil {
+			status.Name = *statusName
+		}
+
+		if statusDescription != nil {
+			status.Description = *statusDescription
 		}
 
 		// Add task data if available and ensure task is not duplicated for the project
@@ -447,15 +461,33 @@ func (s *Store) ProjectCreate(payload entities.ProjectCreatePayload) (*entities.
 	if err != nil {
 		return nil, err
 	}
+	progress := 0.0
+
+	if payload.Progress != nil {
+		progress = *payload.Progress
+	}
+
+	var dateStarted, dateDeadline *time.Time
+
+	if payload.DateStarted != nil {
+		dateStarted = payload.DateStarted
+	}
+	if payload.DateDeadline != nil {
+		dateStarted = payload.DateDeadline
+	}
 
 	proj := entities.Project{}
-	err = tx.QueryRow("INSERT INTO projects (name, description) VALUES ($1, $2) RETURNING id, name, description, createdAt, updatedAt", payload.Name, payload.Description).Scan(
+	err = tx.QueryRow("INSERT INTO projects (name, description, progress, dateStarted, dateDeadline) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, description, progress, dateStarted, dateDeadline, createdAt, updatedAt", payload.Name, payload.Description, progress, dateStarted, dateDeadline).Scan(
 		&proj.ID,
 		&proj.Name,
 		&proj.Description,
+		&progress,
+		&dateStarted,
+		&dateDeadline,
 		&proj.CreatedAt,
 		&proj.UpdatedAt,
 	)
+
 	if err != nil {
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
 			return nil, fmt.Errorf("insert error: %v, rollback error: %v", err, rollbackErr)

@@ -312,8 +312,6 @@ func (s *Store) TaskRestore(id int) (*entities.Task, error) {
 	return nil, nil
 }
 
-// TODO: UPDATE TASK (HOW TO UPDATE SUBTASK(ARRAY OF STRINGS))
-
 func scanRowIntoTask(rows *sql.Rows, task *entities.Task) error {
 	return rows.Scan(
 		&task.ID,

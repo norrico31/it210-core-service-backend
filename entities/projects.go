@@ -15,7 +15,7 @@ type Project struct {
 	ID           int        `json:"id"`
 	Name         string     `json:"name"`
 	Description  string     `json:"description"`
-	Progress     float64    `json:"progress"`
+	Progress     *float64   `json:"progress"`
 	DateStarted  *time.Time `json:"dateStarted"`
 	DateDeadline *time.Time `json:"dateDeadline"`
 	CreatedAt    time.Time  `json:"createdAt"`
@@ -27,12 +27,18 @@ type Project struct {
 }
 
 type ProjectCreatePayload struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	Name         string     `json:"name"`
+	Description  string     `json:"description"`
+	Progress     *float64   `json:"progress"`
+	DateStarted  *time.Time `json:"dateStarted"`
+	DateDeadline *time.Time `json:"dateDeadline"`
 }
 
 type ProjectUpdatePayload struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	ID           int        `json:"id"`
+	Name         string     `json:"name"`
+	Description  string     `json:"description"`
+	Progress     *float64   `json:"progress"`
+	DateStarted  *time.Time `json:"dateStarted"`
+	DateDeadline *time.Time `json:"dateDeadline"`
 }
