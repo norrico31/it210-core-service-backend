@@ -100,10 +100,14 @@ func NewStore(db *sql.DB) *Store {
 func (s *Store) GetTasks(str string) ([]*entities.Task, error) {
 	// SQL query without subtasks
 	query := fmt.Sprintf(`
-        SELECT t.id, t.title, t.description, t.statusId, t.userId, t.projectId, t.createdAt, t.updatedAt, t.deletedAt, t.deletedBy,
-               s.id AS status_id, s.name AS status_name, s.description AS status_description, s.createdAt AS status_createdAt, s.updatedAt AS status_updatedAt, s.deletedAt AS status_deletedAt,
-               u.id AS user_id, u.firstName, u.lastName, u.email, u.age, u.lastActiveAt, u.createdAt AS user_createdAt, u.updatedAt AS user_updatedAt, u.deletedAt AS user_deletedAt,
-               p.id AS project_id, p.name AS project_name, p.description AS project_description, p.createdAt AS project_createdAt, p.updatedAt AS project_updatedAt, p.deletedAt AS project_deletedAt
+        SELECT 
+			t.id, t.title, t.description, t.statusId, t.userId, t.projectId, t.createdAt, t.updatedAt, t.deletedAt, t.deletedBy,
+
+			s.id AS status_id, s.name AS status_name, s.description AS status_description, s.createdAt AS status_createdAt, s.updatedAt AS status_updatedAt, s.deletedAt AS status_deletedAt,
+			
+			u.id AS user_id, u.firstName, u.lastName, u.email, u.age, u.lastActiveAt, u.createdAt AS user_createdAt, u.updatedAt AS user_updatedAt, u.deletedAt AS user_deletedAt,
+			
+			p.id AS project_id, p.name AS project_name, p.description AS project_description, p.createdAt AS project_createdAt, p.updatedAt AS project_updatedAt, p.deletedAt AS project_deletedAt
         FROM tasks t
         LEFT JOIN statuses s ON s.id = t.statusId
         LEFT JOIN users u ON u.id = t.userId
@@ -309,7 +313,35 @@ func (s *Store) TaskDelete(id int) (*entities.Task, error) {
 }
 
 func (s *Store) TaskRestore(id int) (*entities.Task, error) {
-	return nil, nil
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	task := entities.Task{}
+	err = tx.QueryRow("UPDATE tasks SET deletedAt = NULL WHERE id = $1 RETURNING id, title, description, statusId, userId, projectId, createdAt, updatedAt, deletedAt", id).Scan(
+		&task.ID,
+		&task.Title,
+		&task.Description,
+		&task.StatusID,
+		&task.UserID,
+		&task.ProjectID,
+		&task.CreatedAt,
+		&task.UpdatedAt,
+		&task.DeletedAt,
+	)
+
+	if err != nil {
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			return nil, fmt.Errorf("error restoring: %v rollback error: %v", err, rollbackErr)
+		}
+		return nil, err
+	}
+
+	if err = tx.Commit(); err != nil {
+		return &task, nil
+	}
+
+	return &task, nil
 }
 
 func scanRowIntoTask(rows *sql.Rows, task *entities.Task) error {

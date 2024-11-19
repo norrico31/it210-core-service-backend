@@ -127,9 +127,24 @@ func (h *Handler) handleTaskDelete(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleTaskRestore(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	_, ok := vars["taskId"]
+	str, ok := vars["taskId"]
 	if !ok {
 		utils.WriteError(w, http.StatusNotFound, fmt.Errorf("invalid task ID"))
 		return
 	}
+
+	taskId, err := strconv.Atoi(str)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid task ID"))
+		return
+	}
+
+	task, err := h.store.TaskRestore(taskId)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"msg": "Restore Task Successfully!", "data": task})
+
 }

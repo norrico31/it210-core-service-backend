@@ -166,8 +166,6 @@ func (h *Handler) handleProjectRestore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("di ba napasok dito?")
-
 	project, err := h.store.ProjectRestore(projectId)
 
 	if err != nil {
