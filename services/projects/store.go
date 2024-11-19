@@ -477,7 +477,7 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 	return &project, nil
 }
 
-func (s *Store) ProjectCreate(payload entities.ProjectCreatePayload) (*entities.Project, error) {
+func (s *Store) ProjectCreate(payload entities.ProjectCreatePayload) (map[string]interface{}, error) {
 	tx, err := s.db.Begin()
 
 	if err != nil {
@@ -489,23 +489,31 @@ func (s *Store) ProjectCreate(payload entities.ProjectCreatePayload) (*entities.
 		progress = *payload.Progress
 	}
 
-	var dateStarted, dateDeadline *time.Time
+	var started, deadline *time.Time
 
-	// if payload.DateStarted != "" {
-	// 	dateStarted = payload.DateStarted
-	// }
-	// if payload.DateDeadline != nil {
-	// 	dateStarted = payload.DateDeadline
-	// }
+	if payload.DateStarted != "" {
+		dateStarted, err := normalizeDate(payload.DateStarted)
+		if err != nil {
+			return nil, fmt.Errorf("invalid date format for DateStarted: %v", err)
+		}
+		started = &dateStarted
+	}
+	if payload.DateDeadline != "" {
+		dateDeadline, err := normalizeDate(payload.DateDeadline)
+		if err != nil {
+			return nil, fmt.Errorf("invalid date format for DateDeadline: %v", err)
+		}
+		deadline = &dateDeadline
+	}
 
 	proj := entities.Project{}
-	err = tx.QueryRow("INSERT INTO projects (name, description, progress, dateStarted, dateDeadline) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, description, progress, dateStarted, dateDeadline, createdAt, updatedAt", payload.Name, payload.Description, progress, dateStarted, dateDeadline).Scan(
+	err = tx.QueryRow("INSERT INTO projects (name, description, progress, dateStarted, dateDeadline) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, description, progress, dateStarted, dateDeadline, createdAt, updatedAt", payload.Name, payload.Description, progress, started, deadline).Scan(
 		&proj.ID,
 		&proj.Name,
 		&proj.Description,
-		&progress,
-		&dateStarted,
-		&dateDeadline,
+		&proj.Progress,
+		&proj.DateStarted,
+		&proj.DateDeadline,
 		&proj.CreatedAt,
 		&proj.UpdatedAt,
 	)
@@ -520,7 +528,7 @@ func (s *Store) ProjectCreate(payload entities.ProjectCreatePayload) (*entities.
 		return nil, err
 	}
 
-	return &proj, err
+	return buildProjectResponse(proj), err
 }
 
 func (s *Store) ProjectUpdate(payload entities.ProjectUpdatePayload) (map[string]interface{}, error) {
@@ -578,8 +586,6 @@ func (s *Store) ProjectUpdate(payload entities.ProjectUpdatePayload) (map[string
 		existProj.DateDeadline = &dateDeadline
 	}
 
-	fmt.Printf("existing project date?: %s", existProj.DateStarted)
-	// Update the project in the database
 	updateQuery := `
 		UPDATE projects
 		SET name = $1, description = $2, progress = $3, dateStarted = $4, dateDeadline = $5, updatedAt = CURRENT_TIMESTAMP
@@ -647,7 +653,6 @@ func (s *Store) ProjectRestore(id int) (*entities.Project, error) {
 		return nil, err
 	}
 
-	fmt.Println("hala?")
 	proj := entities.Project{}
 	err = tx.QueryRow("UPDATE projects SET deletedAt = NULL WHERE id = $1 RETURNING id, name, description, createdAt, updatedAt, deletedAt", id).Scan(
 		&proj.ID,

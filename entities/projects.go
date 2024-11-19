@@ -5,7 +5,7 @@ import "time"
 type ProjectStore interface {
 	GetProjects(string) ([]*Project, error)
 	GetProject(int) (*Project, error)
-	ProjectCreate(ProjectCreatePayload) (*Project, error)
+	ProjectCreate(ProjectCreatePayload) (map[string]interface{}, error)
 	ProjectUpdate(ProjectUpdatePayload) (map[string]interface{}, error)
 	ProjectDelete(int) (*Project, error)
 	ProjectRestore(int) (*Project, error)
