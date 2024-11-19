@@ -17,7 +17,7 @@ type Role struct {
 	ID          int        `json:"id"`
 	Name        string     `json:"name"`
 	Description string     `json:"description"`
-	CreatedAt   time.Time  `json:"createdAt"`
-	UpdatedAt   time.Time  `json:"updatedAt"`
-	DeletedAt   *time.Time `json:"deletedAt"`
+	CreatedAt   time.Time  `json:"createdAt,omitempty"`
+	UpdatedAt   time.Time  `json:"updatedAt,omitempty"`
+	DeletedAt   *time.Time `json:"deletedAt,omitempty"`
 }
