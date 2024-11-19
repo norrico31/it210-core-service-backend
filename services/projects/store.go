@@ -17,6 +17,57 @@ func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
 }
 
+// SELECT
+// 			p.id AS project_id,
+// 			p.name AS project_name,
+// 			p.description AS project_description,
+// 			p.progress AS project_progress,
+// 			p.dateStarted AS project_date_started,
+// 			p.dateDeadline AS project_date_deadline,
+// 			p.createdAt AS project_created_at,
+// 			p.updatedAt AS project_updated_at,
+// 			p.deletedAt AS project_deleted_at,
+
+// 			u.id AS user_id,
+// 			u.firstName AS user_first_name,
+// 			u.lastName AS user_last_name,
+// 			u.email AS user_email,
+// 			u.age AS user_age,
+
+// 			u.lastActiveAt AS user_last_active_at,
+// 			u.createdAt AS user_created_at,
+// 			u.updatedAt AS user_updated_at,
+// 			u.deletedAt AS user_deleted_at,
+// 			u.deletedBy AS user_deleted_by,
+
+// 			t.id AS task_id,
+// 			t.title AS task_title,
+// 			t.description AS task_description,
+// 			t.statusId AS task_status_id,
+// 			t.userId AS task_user_id,
+// 			t.projectId AS task_project_id,
+// 			t.createdAt AS task_created_at,
+// 			t.updatedAt AS task_updated_at,
+// 			t.deletedAt AS task_deleted_at,
+// 			t.deletedBy AS task_deleted_by,
+
+// 			s.id AS status_id,
+// 			s.name AS status_name,
+// 			s.description AS status_description
+
+// 		FROM
+// 			projects p
+// 		LEFT JOIN
+// 			users_projects up ON p.id = up.project_id
+// 		LEFT JOIN
+// 			users u ON up.user_id = u.id
+// 		LEFT JOIN
+// 			tasks t ON t.projectId = p.id
+// 		LEFT JOIN
+// 			statuses s ON s.id = t.statusId
+// 		WHERE
+// 			p.deletedAt `
+
 // TODO: WHEN DELETE PLEASE INCLUDE THE USER ID TO TRACK WHO'S USER DELETE THE OPERATIONS (deletedBy in tables)
 func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 	query := `
@@ -28,8 +79,9 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 			p.dateStarted AS project_date_started,
 			p.dateDeadline AS project_date_deadline,
 			p.createdAt AS project_created_at,
-			p.updatedAt AS project_updated_at,
-			p.deletedAt AS project_deleted_at,
+ 			p.updatedAt AS project_updated_at,
+ 			p.deletedAt AS project_deleted_at,
+			p.deletedBy project_deleted_by,
 
 			u.id AS user_id,
 			u.firstName AS user_first_name,
@@ -52,8 +104,12 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 			t.createdAt AS task_created_at,
 			t.updatedAt AS task_updated_at,
 			t.deletedAt AS task_deleted_at,
-			t.deletedBy AS task_deleted_by
-			
+			t.deletedBy AS task_deleted_by,
+
+			s.id status_id,
+			s.name status_name,
+			s.description status_description
+
 		FROM
 			projects p
 		LEFT JOIN
@@ -62,6 +118,8 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 			users u ON up.user_id = u.id
 		LEFT JOIN
 			tasks t ON t.projectId = p.id
+		LEFT JOIN
+			statuses s ON s.id = t.statusId
 		WHERE
 			p.deletedAt ` + condition
 
@@ -81,6 +139,7 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 		var project entities.Project
 		var user entities.User
 		var task entities.Task
+		var status entities.Status
 
 		// Use pointers to handle NULL values
 		var userID, userAge, userDeletedBy *int
@@ -94,35 +153,13 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 
 		// Scan project, user, and task data
 		err = rows.Scan(
-			&projectID,
-			&project.Name,
-			&project.Description,
-			&project.Progress,
-			&dateStarted,
-			&dateDeadline,
-			&project.CreatedAt,
-			&project.UpdatedAt,
-			&project.DeletedAt,
-			&userID,
-			&userFirstName,
-			&userLastName,
-			&userEmail,
-			&userAge,
-			&userLastActiveAt,
-			&userCreatedAt,
-			&userUpdatedAt,
-			&userDeletedAt,
-			&userDeletedBy,
-			&taskID,
-			&taskTitle,
-			&taskDescription,
-			&taskStatusID,
-			&taskUserID,
-			&taskProjectID,
-			&taskCreatedAt,
-			&taskUpdatedAt,
-			&taskDeletedAt,
-			&taskDeletedBy,
+			&projectID, &project.Name, &project.Description, &project.Progress, &dateStarted, &dateDeadline, &project.CreatedAt, &project.UpdatedAt, &project.DeletedAt, &project.DeletedBy,
+
+			&userID, &userFirstName, &userLastName, &userEmail, &userAge, &userLastActiveAt, &userCreatedAt, &userUpdatedAt, &userDeletedAt, &userDeletedBy,
+
+			&taskID, &taskTitle, &taskDescription, &taskStatusID, &taskUserID, &taskProjectID, &taskCreatedAt, &taskUpdatedAt, &taskDeletedAt, &taskDeletedBy,
+
+			&status.ID, &status.Name, &status.Description,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan error: %w", err)
@@ -191,6 +228,7 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 				task.UpdatedAt = *taskUpdatedAt
 				task.DeletedAt = taskDeletedAt
 				task.DeletedBy = taskDeletedBy
+				task.Status = status
 
 				// Add task to the project's task list
 				projectsMap[projectID].Tasks = append(projectsMap[projectID].Tasks, task)
