@@ -97,12 +97,6 @@ func (h *Handler) handleProjectUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.store.GetProject(projectId)
-	if err != nil {
-		utils.WriteError(w, http.StatusNotFound, err)
-		return
-	}
-
 	payload := entities.ProjectUpdatePayload{}
 
 	if err := utils.ParseJSON(r, &payload); err != nil {
@@ -111,9 +105,12 @@ func (h *Handler) handleProjectUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	updateProject := entities.ProjectUpdatePayload{
-		ID:          projectId,
-		Name:        payload.Name,
-		Description: payload.Description,
+		ID:           projectId,
+		Name:         payload.Name,
+		Description:  payload.Description,
+		Progress:     payload.Progress,
+		DateStarted:  payload.DateStarted,
+		DateDeadline: payload.DateDeadline,
 	}
 
 	newProj, err := h.store.ProjectUpdate(updateProject)

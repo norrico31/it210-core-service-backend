@@ -89,18 +89,18 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 	}
 	defer rows.Close()
 
-	// Map to hold projects indexed by projectID
 	projectsMap := make(map[int]*entities.Project)
 
 	// Loop through query results
 	for rows.Next() {
 		var projectID int
-		var dateStarted, dateDeadline *time.Time
+		// var dateStarted, dateDeadline *time.Time
 		var project entities.Project
+
 		var user entities.User
 		var task entities.Task
 		var status entities.Status
-		var statusId *int
+		var statusID *int
 		var statusName, statusDescription *string
 
 		// Use pointers to handle NULL values
@@ -121,27 +121,24 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 
 		// Scan project, user, and task data
 		err = rows.Scan(
-			&projectID, &project.Name, &project.Description, &project.Progress, &dateStarted, &dateDeadline, &project.CreatedAt, &project.UpdatedAt, &project.DeletedAt, &project.DeletedBy,
+			&projectID, &project.Name, &project.Description, &project.Progress, &project.DateStarted, &project.DateDeadline, &project.CreatedAt, &project.UpdatedAt, &project.DeletedAt, &project.DeletedBy,
 
 			&userID, &userFirstName, &userLastName, &userEmail, &userAge, &userLastActiveAt, &userCreatedAt, &userUpdatedAt, &userDeletedAt, &userDeletedBy,
 
 			&taskID, &taskTitle, &taskDescription, &taskStatusID, &taskUserID, &taskProjectID, &taskCreatedAt, &taskUpdatedAt, &taskDeletedAt, &taskDeletedBy,
 
-			&statusId, &statusName, &statusDescription,
+			&statusID, &statusName, &statusDescription,
 
 			&userIDTask, &taskUserFirstName, &taskUserLastName, &taskUserEmail, &taskUserAge, &taskUserLastActiveAt, &taskUserCreatedAt, &taskUserUpdatedAt, &taskUserDeletedAt, &taskUserDeletedBy,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan error: %w", err)
 		}
-
 		// If project is not yet in the map, add it
 		if _, exists := projectsMap[projectID]; !exists {
 			project.ID = projectID
-			project.DateStarted = dateStarted   // Assign dateStarted
-			project.DateDeadline = dateDeadline // Assign dateDeadline
-			project.Users = []entities.User{}   // Initialize empty users slice
-			project.Tasks = []entities.Task{}   // Initialize empty tasks slice
+			project.Users = []entities.User{} // Initialize empty users slice
+			project.Tasks = []entities.Task{} // Initialize empty tasks slice
 			projectsMap[projectID] = &project
 		}
 
@@ -175,8 +172,8 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 			projectsMap[projectID].Users = append(projectsMap[projectID].Users, user)
 		}
 
-		if statusId != nil {
-			status.ID = *statusId
+		if statusID != nil {
+			status.ID = *statusID
 		}
 
 		if statusName != nil {
@@ -336,13 +333,13 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 	project := entities.Project{}
 
 	for rows.Next() {
+		var dateStarted, dateDeadline *time.Time
 		user := entities.User{}
 		var userID, userAge, userDeletedBy *int
 		var userFirstName, userLastName, userEmail *string
 		var userLastActiveAt, userCreatedAt, userUpdatedAt, userDeletedAt *time.Time
 
 		task := entities.Task{}
-		status := entities.Status{}
 		var taskID, taskStatusID, taskUserID, taskProjectID, taskDeletedBy *int
 		var taskTitle, taskDescription *string
 		var taskCreatedAt, taskUpdatedAt, taskDeletedAt *time.Time
@@ -352,16 +349,28 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 		var taskUserFirstName, taskUserLastName, taskUserEmail *string
 		var taskUserLastActiveAt, taskUserCreatedAt, taskUserUpdatedAt, taskUserDeletedAt *time.Time
 
+		status := entities.Status{}
+		var statusID *int
+		var statusName, statusDescription *string
+
 		err := rows.Scan(
-			&project.ID, &project.Name, &project.Description, &project.Progress, &project.DateStarted, &project.DateDeadline, &project.CreatedAt, &project.UpdatedAt, &project.DeletedAt, &project.DeletedBy,
+			&project.ID, &project.Name, &project.Description, &project.Progress, &dateStarted, &dateDeadline, &project.CreatedAt, &project.UpdatedAt, &project.DeletedAt, &project.DeletedBy,
 			&userID, &userFirstName, &userLastName, &userEmail, &userAge, &userLastActiveAt, &userCreatedAt, &userUpdatedAt, &userDeletedAt, &userDeletedBy,
 			&taskID, &taskTitle, &taskDescription, &taskStatusID, &taskUserID, &taskProjectID, &taskCreatedAt, &taskUpdatedAt, &taskDeletedAt, &taskDeletedBy,
-			&status.ID, &status.Name, &status.Description,
+			&statusID, &statusName, &statusDescription,
 			&userIDTask, &taskUserFirstName, &taskUserLastName, &taskUserEmail, &taskUserAge, &taskUserLastActiveAt, &taskUserCreatedAt, &taskUserUpdatedAt, &taskUserDeletedAt, &taskUserDeletedBy,
 		)
 		if err != nil {
 			return nil, err
 		}
+
+		if dateStarted != nil {
+			project.DateStarted = dateStarted
+		}
+		if dateDeadline != nil {
+			project.DateDeadline = dateDeadline
+		}
+
 		if userID != nil {
 			user.ID = *userID
 			if userFirstName != nil {
@@ -390,6 +399,19 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 			// Add user to the project's user list
 			project.Users = append(project.Users, user)
 		}
+
+		if statusID != nil {
+			status.ID = *statusID
+		}
+
+		if statusName != nil {
+			status.Name = *statusName
+		}
+
+		if statusDescription != nil {
+			status.Description = *statusDescription
+		}
+
 		if taskID != nil {
 			// Check if the task is already in the project's tasks
 			taskExists := false
@@ -469,12 +491,12 @@ func (s *Store) ProjectCreate(payload entities.ProjectCreatePayload) (*entities.
 
 	var dateStarted, dateDeadline *time.Time
 
-	if payload.DateStarted != nil {
-		dateStarted = payload.DateStarted
-	}
-	if payload.DateDeadline != nil {
-		dateStarted = payload.DateDeadline
-	}
+	// if payload.DateStarted != "" {
+	// 	dateStarted = payload.DateStarted
+	// }
+	// if payload.DateDeadline != nil {
+	// 	dateStarted = payload.DateDeadline
+	// }
 
 	proj := entities.Project{}
 	err = tx.QueryRow("INSERT INTO projects (name, description, progress, dateStarted, dateDeadline) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, description, progress, dateStarted, dateDeadline, createdAt, updatedAt", payload.Name, payload.Description, progress, dateStarted, dateDeadline).Scan(
@@ -501,31 +523,92 @@ func (s *Store) ProjectCreate(payload entities.ProjectCreatePayload) (*entities.
 	return &proj, err
 }
 
-func (s *Store) ProjectUpdate(payload entities.ProjectUpdatePayload) (*entities.Project, error) {
+func (s *Store) ProjectUpdate(payload entities.ProjectUpdatePayload) (map[string]interface{}, error) {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return nil, err
 	}
 
-	proj := &entities.Project{}
-	err = tx.QueryRow("UPDATE projects SET name = $1, description = $2, updatedAt = CURRENT_TIMESTAMP WHERE id = $3 RETURNING id, name, description, createdAt, updatedAt", payload.Name, payload.Description, payload.ID).Scan(
-		&proj.ID,
-		&proj.Name,
-		&proj.Description,
-		&proj.CreatedAt,
-		&proj.UpdatedAt,
-	)
+	// Fetch the existing project
+	query := `
+		SELECT id, name, description, progress, dateStarted, dateDeadline, createdAt, updatedAt
+		FROM projects
+		WHERE id = $1`
+	rows, err := s.db.Query(query, payload.ID)
 	if err != nil {
-		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			return nil, fmt.Errorf("insert error: %v, rollback error: %v", err, rollbackErr)
-		}
-		return nil, err
+		return nil, fmt.Errorf("error fetching project: %v", err)
 	}
+	defer rows.Close()
+
+	existProj := entities.Project{}
+	if rows.Next() {
+		err := rows.Scan(
+			&existProj.ID, &existProj.Name, &existProj.Description, &existProj.Progress,
+			&existProj.DateStarted, &existProj.DateDeadline, &existProj.CreatedAt, &existProj.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+	fmt.Printf("payload dateStarted?: %s", payload.DateStarted)
+	fmt.Printf("payload progress?: %d", payload.Progress)
+
+	// Update project fields based on the payload
+	if payload.Name != "" {
+		existProj.Name = payload.Name
+	}
+	if payload.Description != "" {
+		existProj.Description = payload.Description
+	}
+	if payload.Progress != nil {
+		existProj.Progress = payload.Progress
+	}
+	if payload.DateStarted != "" {
+		dateStarted, err := normalizeDate(payload.DateStarted)
+		if err != nil {
+			return nil, fmt.Errorf("invalid date format for DateStarted: %v", err)
+		}
+		existProj.DateStarted = &dateStarted
+	}
+	if payload.DateDeadline != "" {
+		dateDeadline, err := normalizeDate(payload.DateDeadline)
+		if err != nil {
+			return nil, fmt.Errorf("invalid date format for DateDeadline: %v", err)
+		}
+		existProj.DateDeadline = &dateDeadline
+	}
+
+	fmt.Printf("existing project date?: %s", existProj.DateStarted)
+	// Update the project in the database
+	updateQuery := `
+		UPDATE projects
+		SET name = $1, description = $2, progress = $3, dateStarted = $4, dateDeadline = $5, updatedAt = CURRENT_TIMESTAMP
+		WHERE id = $6
+		RETURNING id, name, description, progress, dateStarted, dateDeadline, createdAt, updatedAt`
+	proj := entities.Project{}
+	err = tx.QueryRow(updateQuery,
+		existProj.Name,
+		existProj.Description,
+		existProj.Progress,
+		existProj.DateStarted,
+		existProj.DateDeadline,
+		existProj.ID,
+	).Scan(
+		&proj.ID, &proj.Name, &proj.Description, &proj.Progress,
+		&proj.DateStarted, &proj.DateDeadline, &proj.CreatedAt, &proj.UpdatedAt,
+	)
+
+	if err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("update error: %v", err)
+	}
+
 	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
 
-	return proj, err
+	// Build and return the response
+	return buildProjectResponse(proj), nil
 }
 
 func (s *Store) ProjectDelete(id int) (*entities.Project, error) {
@@ -597,4 +680,37 @@ func scanRowIntoProject(rows *sql.Rows, proj *entities.Project) error {
 		&proj.UpdatedAt,
 		&proj.DeletedAt,
 	)
+}
+
+func normalizeDate(input string) (time.Time, error) {
+	formats := []string{"1/2/2006", "01/02/2006"} // Support both single and double-digit formats
+	var parsedDate time.Time
+	var err error
+	for _, format := range formats {
+		parsedDate, err = time.Parse(format, input)
+		if err == nil {
+			return parsedDate, nil // Return the first successfully parsed date
+		}
+	}
+	return time.Time{}, fmt.Errorf("could not parse date: %v", input)
+}
+
+func buildProjectResponse(proj entities.Project) map[string]interface{} {
+	formatDate := func(date *time.Time) interface{} {
+		if date != nil {
+			return date.Format("01/02/2006") // MM/DD/YYYY
+		}
+		return nil
+	}
+
+	return map[string]interface{}{
+		"id":           proj.ID,
+		"name":         proj.Name,
+		"description":  proj.Description,
+		"progress":     proj.Progress,
+		"dateStarted":  formatDate(proj.DateStarted),
+		"dateDeadline": formatDate(proj.DateDeadline),
+		"createdAt":    proj.CreatedAt,
+		"updatedAt":    proj.UpdatedAt,
+	}
 }
