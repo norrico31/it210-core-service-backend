@@ -50,8 +50,7 @@ func (h *Handler) handleGetRole(w http.ResponseWriter, r *http.Request) {
 		utils.WriteError(w, http.StatusBadRequest, err)
 		return
 	}
-
-	utils.WriteJSON(w, http.StatusOK, role)
+	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"data": role})
 }
 
 func (h *Handler) handleCreateRole(w http.ResponseWriter, r *http.Request) {
@@ -94,13 +93,6 @@ func (h *Handler) handleUpdateRole(w http.ResponseWriter, r *http.Request) {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid role ID"))
 		return
 	}
-
-	role, err := h.store.GetRole(roleId)
-	if err != nil {
-		utils.WriteError(w, http.StatusBadRequest, err)
-		return
-	}
-
 	var payload entities.RolePayload
 
 	if err := utils.ParseJSON(r, &payload); err != nil {
@@ -108,11 +100,17 @@ func (h *Handler) handleUpdateRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	role, err := h.store.GetRole(roleId)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
 	if payload.Name != "" {
-		if len(payload.Name) < 3 || len(payload.Name) > 50 {
-			utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("name must be between 3 and 50 characters"))
-			return
-		}
+		// if len(payload.Name) < 3 || len(payload.Name) > 50 {
+		// 	utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("name must be between 3 and 50 characters"))
+		// 	return
+		// }
 		role.Name = payload.Name
 	}
 
@@ -120,17 +118,18 @@ func (h *Handler) handleUpdateRole(w http.ResponseWriter, r *http.Request) {
 		role.Description = payload.Description
 	}
 
-	role, err = h.store.UpdateRole(entities.RolePayload{
+	err = h.store.UpdateRole(entities.RolePayload{
 		ID:          role.ID,
 		Name:        role.Name,
 		Description: role.Description,
 	})
+
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"data": role})
+	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"msg": "Update Role Successfully!"})
 }
 
 func (h *Handler) handleDeleteRole(w http.ResponseWriter, r *http.Request) {
@@ -159,7 +158,7 @@ func (h *Handler) handleDeleteRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.WriteJSON(w, http.StatusNoContent, nil)
+	utils.WriteJSON(w, http.StatusNoContent, map[string]interface{}{"msg": "Delete Role Successfully!"})
 }
 
 func (h *Handler) handleRestoreRole(w http.ResponseWriter, r *http.Request) {

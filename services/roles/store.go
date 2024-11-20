@@ -16,19 +16,24 @@ func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
 }
 
-func (s *Store) GetRoles() ([]*entities.Role, error) {
-	rows, err := s.db.Query(`SELECT id, name , description FROM roles WHERE deletedAt IS NULL`)
+func (s *Store) GetRoles() ([]entities.Role, error) {
+	rows, err := s.db.Query(`
+		SELECT id, name, description, createdAt, updatedAt
+			FROM roles
+		WHERE deletedAt IS NULL
+		ORDER BY createdAt DESC
+	`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query roles: %v", err)
 	}
 	defer rows.Close()
 
-	var roles []*entities.Role
+	roles := []entities.Role{}
 
 	for rows.Next() {
-		role := &entities.Role{}
-		err := scanRowIntoRole(rows, role)
+		role := entities.Role{}
 
+		err := scanRowIntoRole(rows, &role)
 		if err != nil {
 			log.Printf("Failed to scan role: %v", err)
 			continue
@@ -43,23 +48,22 @@ func (s *Store) GetRoles() ([]*entities.Role, error) {
 }
 
 func (s *Store) GetRole(id int) (*entities.Role, error) {
-	rows, err := s.db.Query("SELECT id, name , description FROM roles WHERE deletedAt IS NULL AND id = $1", id)
+	role := entities.Role{}
+	err := s.db.QueryRow("SELECT id, name, description, createdAt, updatedAt FROM roles WHERE deletedAt IS NULL AND id = $1", id).Scan(
+		&role.ID,
+		&role.Name,
+		&role.Description,
+		&role.CreatedAt,
+		&role.UpdatedAt,
+	)
 	if err != nil {
-		return nil, err
-	}
-
-	role := &entities.Role{}
-	for rows.Next() {
-		err := scanRowIntoRole(rows, role)
-		if err != nil {
-			return nil, err
-		}
+		return nil, fmt.Errorf("role not found")
 	}
 
 	if role.ID == 0 {
 		return nil, fmt.Errorf("role not found")
 	}
-	return role, nil
+	return &role, nil
 }
 
 func (s *Store) CreateRole(payload entities.RolePayload) (*entities.Role, error) {
@@ -69,13 +73,7 @@ func (s *Store) CreateRole(payload entities.RolePayload) (*entities.Role, error)
 		return nil, err
 	}
 
-	role := entities.Role{}
-
-	err = tx.QueryRow("INSERT INTO roles (name, description) VALUES ($1, $2) RETURNING id, name, description", payload.Name, payload.Description).Scan(
-		&role.ID,
-		&role.Name,
-		&role.Description,
-	)
+	_, err = tx.Exec("INSERT INTO roles (name, description) VALUES ($1, $2)", payload.Name, payload.Description)
 	if err != nil {
 		// If there's an error, rollback the transaction
 		if rbErr := tx.Rollback(); rbErr != nil {
@@ -86,58 +84,49 @@ func (s *Store) CreateRole(payload entities.RolePayload) (*entities.Role, error)
 
 	// Commit the transaction if all went well
 	if err = tx.Commit(); err != nil {
-		return &role, err
+		return &entities.Role{Name: payload.Name, Description: payload.Description}, err
 	}
 
-	return &role, err
+	return &entities.Role{Name: payload.Name, Description: payload.Description}, err
 }
 
-func (s *Store) UpdateRole(payload entities.RolePayload) (*entities.Role, error) {
-	tx, err := s.db.Begin()
-
-	if err != nil {
-		return nil, err
-	}
-
-	role := entities.Role{}
-	err = tx.QueryRow("UPDATE roles SET name = $1, description = $2, updatedAt = CURRENT_TIMESTAMP WHERE id = $3 RETURNING id, name, description", payload.Name, payload.Description, payload.ID).Scan(
-		&role.ID,
-		&role.Name,
-		&role.Description,
-	)
-	if err != nil {
-		if rbErr := tx.Rollback(); rbErr != nil {
-			return nil, fmt.Errorf("insert error: %v, rollback error: %v", err, rbErr)
-		}
-		return nil, err
-	}
-
-	if err = tx.Commit(); err != nil {
-		return &role, err
-	}
-
-	return &role, err
-}
-
-func (s *Store) DeleteRole(id int) error {
+func (s *Store) UpdateRole(payload entities.RolePayload) error {
 	tx, err := s.db.Begin()
 
 	if err != nil {
 		return err
 	}
 
-	_, err = tx.Exec("UPDATE roles SET deletedAt = CURRENT_TIMESTAMP WHERE id = $1", id)
-	// _, err = tx.Exec("DELETE FROM roles WHERE id = $1", id)
-	fmt.Printf("executing here?")
+	_, err = tx.Exec("UPDATE roles SET name = $1, description = $2, updatedAt = CURRENT_TIMESTAMP WHERE id = $3", payload.Name, payload.Description, payload.ID)
 	if err != nil {
-		// Rollback in case of any error during deletion
+		if rbErr := tx.Rollback(); rbErr != nil {
+			return fmt.Errorf("insert error: %v, rollback error: %v", err, rbErr)
+		}
+		return err
+	}
+
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+
+	return err
+}
+
+func (s *Store) DeleteRole(id int) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec("UPDATE roles SET deletedAt = CURRENT_TIMESTAMP WHERE id = $1", id)
+
+	if err != nil {
 		if rbErr := tx.Rollback(); rbErr != nil {
 			return fmt.Errorf("delete error: %v, rollback error: %v", err, rbErr)
 		}
 		return err
 	}
 
-	// Commit the transaction if all went well
 	if err = tx.Commit(); err != nil {
 		return err
 	}
@@ -153,9 +142,7 @@ func (s *Store) RestoreRole(id int) error {
 	}
 
 	_, err = tx.Exec("UPDATE roles SET deletedAt = NULL WHERE id = $1", id)
-	// _, err = tx.Exec("DELETE FROM roles WHERE id = $1", id)
 	if err != nil {
-		// Rollback in case of any error during deletion
 		if rbErr := tx.Rollback(); rbErr != nil {
 			return fmt.Errorf("delete error: %v, rollback error: %v", err, rbErr)
 		}
@@ -175,5 +162,7 @@ func scanRowIntoRole(rows *sql.Rows, role *entities.Role) error {
 		&role.ID,
 		&role.Name,
 		&role.Description,
+		&role.CreatedAt,
+		&role.UpdatedAt,
 	)
 }
