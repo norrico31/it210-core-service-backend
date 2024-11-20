@@ -9,6 +9,7 @@ type UserStore interface {
 	CreateUser(UserCreatePayload) error
 	UpdateUser(int, UserUpdatePayload, []int) error
 	DeleteUser(int) error
+	RestoreUser(int) error
 	SetUserActive(int) error
 	UpdateLastActiveTime(int, time.Time) error
 }

@@ -371,7 +371,7 @@ func (s *Store) UpdateUser(userId int, user entities.UserUpdatePayload, projectI
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %v", err)
 	}
-
+	fmt.Printf("proejctIDS: %v", projectIDs)
 	// Update user
 	_, err = tx.Exec(`
 		UPDATE users
@@ -392,28 +392,50 @@ func (s *Store) UpdateUser(userId int, user entities.UserUpdatePayload, projectI
 		return fmt.Errorf("failed to update user: %v", err)
 	}
 
-	// Delete existing in users_projects
-	_, err = tx.Exec(`UPDATE users_projects SET deletedAt = CURRENT_TIMESTAMP, deletedBy = $1 WHERE user_id = $1`, userId)
+	_, err = tx.Exec(`DELETE FROM users_projects WHERE user_id = $1`, userId)
 	if err != nil {
 		tx.Rollback()
 		return fmt.Errorf("failed to clear project associations: %v", err)
 	}
 
-	// Create new user with projects in users_projects
 	for _, projID := range projectIDs {
-		// _, err = tx.Exec(`
-		// 	INSERT INTO users_projects (user_id, project_id)
-		// 	VALUES ($1, $2)
-		// `, userId, projID)
 		_, err = tx.Exec(`
-			UPDATE users_projects SET deletedAt = NULL, deletedBy = NULL WHERE user_id = $1
+			INSERT INTO users_projects (user_id, project_id)
 			VALUES ($1, $2)
-		`, userId)
+		`, userId, projID)
 		if err != nil {
 			tx.Rollback()
 			return fmt.Errorf("failed to associate user with project %d: %v", projID, err)
 		}
 	}
+
+	// TODO: EXTREME HEADACHE
+	//* OPTION A
+	// CHECK IF INPUT PROJECT EXIST IN USERS AND GET IT TO SET THE deletedAt to null
+	// IF PROJECT DOESNS'T EXIST INSERT THE NEW PROJECTS in users_projects
+	//* OPTION B CREATE NEW TABLE FOR users_projects_deleted for softdelete
+
+	// Delete existing in users_projects
+	// _, err = tx.Exec(`UPDATE users_projects SET deletedAt = CURRENT_TIMESTAMP, deletedBy = $1 WHERE user_id = $1`, userId)
+	// if err != nil {
+	// 	tx.Rollback()
+	// 	return fmt.Errorf("failed to clear project associations: %v", err)
+	// }
+
+	// // Create new user with projects in users_projects
+	// for _, projID := range projectIDs {
+	// 	// _, err = tx.Exec(`
+	// 	// 	INSERT INTO users_projects (user_id, project_id)
+	// 	// 	VALUES ($1, $2)
+	// 	// `, userId, projID)
+	// 	_, err = tx.Exec(`
+	// 		UPDATE users_projects SET deletedAt = NULL, deletedBy = NULL WHERE user_id = $1
+	// 	`, userId)
+	// 	if err != nil {
+	// 		tx.Rollback()
+	// 		return fmt.Errorf("failed to associate user with project %d: %v", projID, err)
+	// 	}
+	// }
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("transaction commit error: %v", err)
@@ -428,15 +450,43 @@ func (s *Store) DeleteUser(userId int) error {
 		return err
 	}
 
-	_, err = tx.Exec("UPDATE users SET deletedAt = CURRENT_TIMESTAMP, deletedBy = $1 WHERE id = $1", userId)
+	// TODO: ADD THE USER WHO DELETED DATA
+	_, err = tx.Exec("UPDATE users SET deletedAt = CURRENT_TIMESTAMP WHERE id = $1", userId)
 	if err != nil {
 		tx.Rollback()
 		return fmt.Errorf("failed to delete user with project %d: %v", userId, err)
 	}
-	_, err = tx.Exec("UPDATE users_projects SET deletedAt = CURRENT_TIMESTAMP, deletedBy = $1 WHERE user_id = $1", userId)
+	// TODO: ADD THE USER WHO DELETED DATA
+
+	_, err = tx.Exec("UPDATE users_projects SET deletedAt = CURRENT_TIMESTAMP WHERE user_id = $1", userId)
 	if err != nil {
 		tx.Rollback()
 		return fmt.Errorf("failed to delete user with project %d: %v", userId, err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("transaction commit error: %v", err)
+	}
+	return nil
+}
+
+func (s *Store) RestoreUser(userId int) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	// TODO: ADD THE USER WHO DELETED DATA
+	_, err = tx.Exec("UPDATE users SET deletedAt = NULL WHERE id = $1", userId)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to restore user with project %d: %v", userId, err)
+	}
+
+	// TODO: ADD THE USER WHO DELETED DATA
+	_, err = tx.Exec("UPDATE users_projects SET deletedAt = NULL WHERE user_id = $1", userId)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to restore user with project %d: %v", userId, err)
 	}
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("transaction commit error: %v", err)

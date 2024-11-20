@@ -214,6 +214,29 @@ func (h *Handler) HandleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJSON(w, http.StatusNoContent, nil)
 }
 
+func (h *Handler) handleRestoreUser(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	str, ok := vars["userId"]
+	if !ok {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing user ID"))
+		return
+	}
+
+	userId, err := strconv.Atoi(str)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid user ID"))
+		return
+	}
+
+	err = h.store.RestoreUser(userId)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusNoContent, nil)
+}
+
 func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	str, ok := vars["userId"]
