@@ -14,10 +14,32 @@ func SeedProjects(db *sql.DB) error {
 		{
 			Name:        "Project 124 Interpreter",
 			Description: "Description for Project 124 nakakaiyak",
+			Progress:    float64Ptr(31),
 		},
 		{
 			Name:        "Project 210 Web App DOSTV",
 			Description: "Description for web app dostv chill lang",
+			Progress:    float64Ptr(20),
+		},
+		{
+			Name:        "Single Sleeping Barber",
+			Description: "Description for single sleeping barber problem",
+			Progress:    float64Ptr(18),
+		},
+		{
+			Name:        "CMSC 124 Interpreter Project",
+			Description: "Description for interpreter",
+			Progress:    float64Ptr(10),
+		},
+		{
+			Name:        "CMSC 124 Messenger APP Erlang",
+			Description: "Description for messenger app in erlang",
+			Progress:    float64Ptr(18),
+		},
+		{
+			Name:        "CMSC 124 Rust Superior",
+			Description: "Description for rustlings",
+			Progress:    float64Ptr(50),
 		},
 	}
 
@@ -32,9 +54,9 @@ func SeedProjects(db *sql.DB) error {
 
 			// Insert project into the database
 			_, err := db.Exec(`
-				INSERT INTO projects (name, description, createdAt, updatedAt)
-				VALUES ($1, $2, $3, $4)
-			`, project.Name, project.Description, time.Now(), time.Now())
+				INSERT INTO projects (name, description, progress, createdAt, updatedAt)
+				VALUES ($1, $2, $3, $4, $5)
+			`, project.Name, project.Description, project.Progress, time.Now(), time.Now())
 
 			if err != nil {
 				log.Printf("Failed to insert project %s: %v\n", project.Name, err)
@@ -95,4 +117,8 @@ func SeedProjects(db *sql.DB) error {
 	wg.Wait()
 
 	return nil
+}
+
+func float64Ptr(value float64) *float64 {
+	return &value
 }

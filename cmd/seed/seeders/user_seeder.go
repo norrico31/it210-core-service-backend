@@ -2,7 +2,6 @@ package seeders
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -39,11 +38,8 @@ func SeedUsers(db *sql.DB) error {
 		roles[roleName] = roleId
 	}
 
-	fmt.Printf("================ role admin: %v \n", roles)
 	admin := roles["Admin"]
 	employee := roles["Employee"]
-	fmt.Printf("================ role admin: %v \n", admin)
-	fmt.Printf("================ role employee: %v \n", employee)
 
 	now := time.Now()
 	users := []entities.User{

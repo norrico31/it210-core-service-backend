@@ -258,6 +258,7 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 	return projects, nil
 }
 
+// TODO: REFACTOR SEPARATE THE ARRAYS INTO OTHER QUERY
 func (s *Store) GetProject(id int) (*entities.Project, error) {
 	query := `
 		SELECT 

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/norrico31/it210-core-service-backend/entities"
+	"github.com/norrico31/it210-core-service-backend/utils"
 )
 
 type Store struct {
@@ -29,7 +30,7 @@ func (s *Store) GetUsers() ([]*entities.User, error) {
             u.lastActiveAt,
             u.createdAt,
             u.updatedAt,
-            u.deletedAt,
+			u.deletedAt,
 
 			r.id AS role_id,
 			r.name AS role_name,
@@ -41,8 +42,7 @@ func (s *Store) GetUsers() ([]*entities.User, error) {
             p.name AS project_name,
             p.description AS project_description,
             p.createdAt AS project_createdAt,
-            p.updatedAt AS project_updatedAt,
-            p.deletedAt AS project_deletedAt
+            p.updatedAt AS project_updatedAt
 
         FROM users u
 		LEFT JOIN roles r ON r.id = u.roleId
@@ -66,10 +66,9 @@ func (s *Store) GetUsers() ([]*entities.User, error) {
 			projectDescription           sql.NullString
 			projectCreatedAt             sql.NullTime
 			projectUpdatedAt             sql.NullTime
-			projectDeletedAt             sql.NullTime
 			user                         entities.User
 			project                      entities.Project
-			roleId                       *int
+			userAge, roleId              *int
 			roleName, roleDescription    *string
 			roleCreatedAt, roleUpdatedAt *time.Time
 		)
@@ -79,27 +78,31 @@ func (s *Store) GetUsers() ([]*entities.User, error) {
 			&user.FirstName,
 			&user.LastName,
 			&user.Email,
-			&user.Age,
+			&userAge,
 			&user.RoleId,
 			&user.LastActiveAt,
 			&user.CreatedAt,
 			&user.UpdatedAt,
 			&user.DeletedAt,
+
 			&roleId,
 			&roleName,
 			&roleDescription,
 			&roleCreatedAt,
 			&roleUpdatedAt,
+
 			&projectID,
 			&projectName,
 			&projectDescription,
 			&projectCreatedAt,
 			&projectUpdatedAt,
-			&projectDeletedAt,
 		)
 		if err != nil {
 			log.Printf("Failed to scan user or project: %v", err)
 			continue
+		}
+		if userAge != nil {
+			user.Age = *userAge
 		}
 		if roleId != nil {
 			user.Role = entities.Role{
@@ -126,12 +129,6 @@ func (s *Store) GetUsers() ([]*entities.User, error) {
 			project.CreatedAt = projectCreatedAt.Time
 			project.UpdatedAt = projectUpdatedAt.Time
 
-			if projectDeletedAt.Valid {
-				project.DeletedAt = &projectDeletedAt.Time
-			} else {
-				project.DeletedAt = nil
-			}
-
 			// Append the project to the user's project list
 			userMap[userID].Projects = append(userMap[userID].Projects, project)
 		}
@@ -148,19 +145,113 @@ func (s *Store) GetUsers() ([]*entities.User, error) {
 
 func (s *Store) GetUserById(id int) (*entities.User, error) {
 	user := entities.User{}
+	var (
+		roleID, userAge              *int
+		roleName, roleDescription    *string
+		roleCreatedAt, roleUpdatedAt *time.Time
+	)
+
 	err := s.db.QueryRow(`
-		SELECT  
-			id, firstName,
-			age, lastName, 
-			e-mail, lastActiveAt,
-			roleId,
-			createdAt, updatedAt, 
-		FROM users 
-		WHERE deletedAt IS NULL id = $1
-	`, id).Scan()
+		SELECT 
+            u.id AS user_id,
+            u.firstName,
+            u.lastName,
+            u.email,
+            u.age,
+			u.roleId,
+            u.lastActiveAt,
+            u.createdAt,
+            u.updatedAt,
+            u.deletedAt,
+
+			r.id AS role_id,
+			r.name AS role_name,
+			r.description AS role_description,
+			r.createdAt AS role_created_at,
+			r.updatedAt AS role_updated_at
+
+        FROM users u
+		LEFT JOIN roles r ON r.deletedAt IS NULL AND r.id = u.roleId
+		WHERE u.deletedAt IS NULL AND u.id = $1
+	`, id).Scan(
+		&user.ID,
+		&user.FirstName,
+		&user.LastName,
+		&user.Email,
+		&userAge,
+		&user.RoleId,
+		&user.LastActiveAt,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+		&user.DeletedAt,
+		&roleID,
+		&roleName,
+		&roleDescription,
+		&roleCreatedAt,
+		&roleUpdatedAt,
+	)
 	if err != nil {
-		return nil, fmt.Errorf("user not found")
+		return nil, fmt.Errorf("user id %v not found!", id)
 	}
+
+	if userAge != nil {
+		user.Age = *userAge
+	}
+
+	if user.RoleId != nil {
+		user.Role = entities.Role{
+			ID:          *roleID,
+			Name:        *roleName,
+			Description: *roleDescription,
+			CreatedAt:   *roleCreatedAt,
+			UpdatedAt:   *roleUpdatedAt,
+		}
+	}
+
+	rows, err := s.db.Query(`
+		SELECT 
+			p.id AS project_id,
+			p.name AS project_name,
+			p.description AS project_description,
+			p.progress,
+			p.dateStarted,
+			p.dateDeadline,
+			p.createdAt AS project_created_at,
+			p.updatedAt AS project_updated_at
+
+		FROM users_projects up
+		LEFT JOIN projects p ON up.project_id = p.id
+		WHERE up.user_id = $1 AND p.deletedAt IS NULL
+	`, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query users_projects: %v", err)
+	}
+	defer rows.Close()
+
+	projects := []entities.Project{}
+	for rows.Next() {
+		proj := entities.Project{}
+		err := rows.Scan(
+			&proj.ID,
+			&proj.Name,
+			&proj.Description,
+			&proj.Progress,
+			&proj.DateStarted,
+			&proj.DateDeadline,
+			&proj.CreatedAt,
+			&proj.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan project: %v", err)
+		}
+		projects = append(projects, proj)
+	}
+
+	if rows.Err() != nil {
+		return nil, fmt.Errorf("error iterating over projects rows: %v", rows.Err())
+	}
+
+	user.Projects = projects
 
 	if user.ID == 0 {
 		return nil, fmt.Errorf("user not found")
@@ -197,7 +288,6 @@ func (s *Store) GetUserByEmail(email string) (*entities.User, error) {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("user with email %s not found", email)
 		}
-		fmt.Println("DITO NGA YON", err)
 		return nil, err
 	}
 
@@ -217,9 +307,69 @@ func (s *Store) GetUserByEmail(email string) (*entities.User, error) {
 	return user, nil
 }
 
-func (s *Store) CreateUser(user entities.User) error {
-	_, err := s.db.Exec("INSERT INTO users (firstName, lastName, email, password, lastActiveAt) VALUES (?, ?, ?, ?, ?)", user.FirstName, user.LastName, user.Email, user.Password, nil)
-	return err
+type ProjectValidate struct {
+	ID   string `json:"name"`
+	Name string `json:"description"`
+}
+
+func (s *Store) CreateUser(payload entities.UserCreatePayload) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %v", err)
+	}
+
+	password, err := utils.HashPassword("secret123")
+	if err != nil {
+		return err
+	}
+
+	var userID int
+	err = tx.QueryRow(`
+		INSERT INTO users (firstName, lastName, email, roleId, age, password, createdAt, updatedAt) 
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id
+	`,
+		payload.FirstName,
+		payload.LastName,
+		payload.Email,
+		payload.RoleId,
+		payload.Age,
+		password,
+		time.Now(),
+		time.Now(),
+	).Scan(&userID)
+
+	if err != nil {
+		if rbErr := tx.Rollback(); rbErr != nil {
+			return fmt.Errorf("insert error: %v, rollback error: %v", err, rbErr)
+		}
+		return err
+	}
+
+	// Insert user-project associations if any
+	if payload.ProjectIDS != nil {
+		for _, projID := range *payload.ProjectIDS {
+			_, err := tx.Exec(`
+				INSERT INTO users_projects (user_id, project_id)
+				VALUES ($1, $2)
+			`,
+				userID,
+				projID)
+			if err != nil {
+				if rbErr := tx.Rollback(); rbErr != nil {
+					return fmt.Errorf("association insert error: %v, rollback error: %v", err, rbErr)
+				}
+				return err
+			}
+		}
+	}
+
+	// Commit the transaction
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("transaction commit error: %v", err)
+	}
+
+	return nil
 }
 
 func (s *Store) UpdateUser(user entities.User) error {

@@ -20,10 +20,10 @@ type Project struct {
 	DateDeadline *time.Time `json:"dateDeadline"`
 	CreatedAt    time.Time  `json:"createdAt"`
 	UpdatedAt    time.Time  `json:"updatedAt"`
-	DeletedAt    *time.Time `json:"deletedAt"`
 	Users        []User     `json:"users"`
 	Tasks        []Task     `json:"tasks"`
-	DeletedBy    *int       `json:"deletedBy"`
+	DeletedBy    *int       `json:"deletedBy,omitempty"`
+	DeletedAt    *time.Time `json:"deletedAt,omitempty"`
 }
 
 type ProjectCreatePayload struct {

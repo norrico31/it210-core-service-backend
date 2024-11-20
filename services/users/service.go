@@ -45,17 +45,16 @@ func (h *Handler) handleGetUser(w http.ResponseWriter, r *http.Request) {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid user ID"))
 		return
 	}
-
 	user, err := h.store.GetUserById(userId)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, err)
 		return
 	}
-	utils.WriteJSON(w, http.StatusOK, user)
+	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"data": user})
 }
 
 func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
-	var payload entities.UserRegisterPayload
+	var payload entities.UserCreatePayload
 
 	if err := utils.ParseJSON(r, &payload); err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
@@ -74,17 +73,13 @@ func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hashedPassword, err := utils.HashPassword(payload.Password)
-	if err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, err)
-		return
-	}
-
-	err = h.store.CreateUser(entities.User{
-		FirstName: payload.FirstName,
-		LastName:  payload.LastName,
-		Email:     payload.Email,
-		Password:  hashedPassword,
+	err = h.store.CreateUser(entities.UserCreatePayload{
+		FirstName:  payload.FirstName,
+		LastName:   payload.LastName,
+		Email:      payload.Email,
+		Age:        payload.Age,
+		RoleId:     payload.RoleId,
+		ProjectIDS: payload.ProjectIDS,
 	})
 
 	if err != nil {
