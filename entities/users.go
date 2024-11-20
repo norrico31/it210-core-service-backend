@@ -19,6 +19,7 @@ type User struct {
 	Age          int        `json:"age"`
 	LastName     string     `json:"lastName"`
 	Email        string     `json:"e-mail"`
+	RoleId       *int       `json:"roleId"`
 	Password     string     `json:"-"`
 	LastActiveAt *time.Time `json:"lastActiveAt"`
 	CreatedAt    time.Time  `json:"createdAt"`
@@ -28,7 +29,7 @@ type User struct {
 	DeletedBy    *int       `json:"deletedBy"`
 }
 
-// USER MUST HAVE A TEAMS
+// TODO REFACTOR
 type UserRegisterPayload struct {
 	FirstName string `json:"firstName" validate:"required"`
 	LastName  string `json:"lastName" validate:"required"`

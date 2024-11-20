@@ -26,6 +26,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create migrate driver: %v", err)
 	}
+	defer db.Close()
 
 	m, err := migrate.NewWithDatabaseInstance(
 		"file://cmd/migrate/migrations",

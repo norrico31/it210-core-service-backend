@@ -120,25 +120,26 @@ func (s *Store) GetUsers() ([]*entities.User, error) {
 }
 
 func (s *Store) GetUserById(id int) (*entities.User, error) {
-	rows, err := s.db.Query("SELECT * FROM users WHERE id = $1", id)
+	user := entities.User{}
+	err := s.db.QueryRow(`
+		SELECT  
+			id, firstName,
+			age, lastName, 
+			e-mail, lastActiveAt,
+			roleId,
+			createdAt, updatedAt, 
+		FROM users 
+		WHERE deletedAt IS NULL id = $1
+	`, id).Scan()
 	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	user := new(entities.User)
-	for rows.Next() {
-		err := scanRowIntoUser(rows, user)
-		if err != nil {
-			return nil, err
-		}
+		return nil, fmt.Errorf("user not found")
 	}
 
 	if user.ID == 0 {
 		return nil, fmt.Errorf("user not found")
 	}
 
-	return user, nil
+	return &user, nil
 }
 
 func (s *Store) GetUserByEmail(email string) (*entities.User, error) {

@@ -2,6 +2,7 @@ package seeders
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -10,7 +11,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func SeedUsers(db *sql.DB) {
+func SeedUsers(db *sql.DB) error {
 	hashPassword := func(password string) string {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 		if err != nil {
@@ -18,6 +19,32 @@ func SeedUsers(db *sql.DB) {
 		}
 		return string(hashedPassword)
 	}
+
+	roles := map[string]int{}
+	rows, err := db.Query("SELECT id, name FROM roles")
+	if err != nil {
+		log.Fatalf("roles not yet seed: %v", err)
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var roleId int
+		var roleName string
+		err := rows.Scan(&roleId, &roleName)
+		if err != nil {
+			log.Fatalf("roles not yet seed: %v", err)
+			return err
+		}
+		roles[roleName] = roleId
+	}
+
+	fmt.Printf("================ role admin: %v \n", roles)
+	admin := roles["Admin"]
+	employee := roles["Employee"]
+	fmt.Printf("================ role admin: %v \n", admin)
+	fmt.Printf("================ role employee: %v \n", employee)
+
 	now := time.Now()
 	users := []entities.User{
 		{
@@ -25,6 +52,7 @@ func SeedUsers(db *sql.DB) {
 			LastName:  "Bitmal",
 			Age:       20,
 			Email:     "mvbitmal@up.edu.ph",
+			RoleId:    &admin,
 			Password:  hashPassword("secret.123"),
 			CreatedAt: now,
 			UpdatedAt: now,
@@ -33,6 +61,7 @@ func SeedUsers(db *sql.DB) {
 			FirstName: "Chester",
 			LastName:  "Francisco",
 			Age:       19,
+			RoleId:    &admin,
 			Email:     "cgfrancisco@up.edu.ph",
 			Password:  hashPassword("secret.123"),
 			CreatedAt: now,
@@ -42,6 +71,7 @@ func SeedUsers(db *sql.DB) {
 			FirstName: "Norrico Gerald",
 			LastName:  "Biason",
 			Age:       18,
+			RoleId:    &employee,
 			Email:     "nmbiason@up.edu.ph",
 			Password:  hashPassword("secret.123"),
 			CreatedAt: now,
@@ -57,12 +87,13 @@ func SeedUsers(db *sql.DB) {
 			defer wg.Done()
 
 			_, err := db.Exec(`
-			INSERT INTO users (firstName, lastName, age, email, password, createdAt, updatedAt) 
-			VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+			INSERT INTO users (firstName, lastName, age, email, roleId, password, createdAt, updatedAt) 
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 				u.FirstName,
 				u.LastName,
 				u.Age,
 				u.Email,
+				u.RoleId,
 				u.Password,
 				u.CreatedAt,
 				u.UpdatedAt)
@@ -75,4 +106,5 @@ func SeedUsers(db *sql.DB) {
 	}
 	wg.Wait()
 	log.Println("Users table seeded successfully.")
+	return nil
 }

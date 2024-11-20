@@ -11,27 +11,23 @@ import (
 )
 
 func SeedRoles(db *sql.DB) error {
-	// Sample data for seeding
 	roles := []entities.Role{
 		{
 			Name:        "Admin",
-			Description: "administrator", // Assume valid description ID exists
+			Description: "administrator",
 		},
 		{
 			Name:        "Employee",
-			Description: "employee", // Assume valid description ID exists
+			Description: "employee",
 		},
 		{
 			Name:        "Manager",
-			Description: "manager", // Assume valid description ID exists
+			Description: "manager",
 		},
-		// Add more roles as needed
 	}
 
 	var wg sync.WaitGroup
-	// Insert each role into the database
 	for _, role := range roles {
-		// Insert role into the database
 		wg.Add(1)
 
 		go func(role entities.Role) {

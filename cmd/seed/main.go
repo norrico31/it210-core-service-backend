@@ -12,11 +12,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to the database %v", err)
 	}
-	// db.Exec(`DROP DATABASE it210`)
-	// db.Exec(`CREATE DATABASE it210`)
+	defer db.Close()
 	seeders.SeedRoles(db)
-	seeders.SeedUsers(db)
 	seeders.SeedStatuses(db)
+	seeders.SeedUsers(db)
 	seeders.SeedProjects(db)
 	seeders.SeedTasks(db)
 	log.Println("Seeding successfully complete.")
