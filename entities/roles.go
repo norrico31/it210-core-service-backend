@@ -7,8 +7,8 @@ import (
 type RoleStore interface {
 	GetRoles() ([]*Role, error)
 	GetRole(int) (*Role, error)
-	CreateRole(Role) error
-	UpdateRole(Role) error
+	CreateRole(RolePayload) (*Role, error)
+	UpdateRole(RolePayload) (*Role, error)
 	DeleteRole(int) error
 	RestoreRole(int) error
 }
@@ -20,4 +20,10 @@ type Role struct {
 	CreatedAt   time.Time  `json:"createdAt,omitempty"`
 	UpdatedAt   time.Time  `json:"updatedAt,omitempty"`
 	DeletedAt   *time.Time `json:"deletedAt,omitempty"`
+}
+
+type RolePayload struct {
+	ID          int    `json:"id"`
+	Name        string `validate:"required,min=3,max=50"`
+	Description string `json:"description"`
 }

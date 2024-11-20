@@ -11,7 +11,7 @@ import (
 
 var Validate = validator.New()
 
-func ParseJSON(r *http.Request, payload any) error {
+func ParseJSON[T any](r *http.Request, payload T) error {
 	if r.Body == nil {
 		return fmt.Errorf("missing request body")
 	}

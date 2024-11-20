@@ -62,7 +62,7 @@ func (s *Store) GetRole(id int) (*entities.Role, error) {
 	return role, nil
 }
 
-func (s *Store) CreateRole(payload entities.Role) (*entities.Role, error) {
+func (s *Store) CreateRole(payload entities.RolePayload) (*entities.Role, error) {
 	tx, err := s.db.Begin()
 
 	if err != nil {
@@ -92,26 +92,31 @@ func (s *Store) CreateRole(payload entities.Role) (*entities.Role, error) {
 	return &role, err
 }
 
-func (s *Store) UpdateRole(role entities.Role) error {
+func (s *Store) UpdateRole(payload entities.RolePayload) (*entities.Role, error) {
 	tx, err := s.db.Begin()
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, err = tx.Exec("UPDATE roles SET name = $1, description = $2, updatedAt = CURRENT_TIMESTAMP WHERE id = $3", role.Name, role.Description, role.ID)
+	role := entities.Role{}
+	err = tx.QueryRow("UPDATE roles SET name = $1, description = $2, updatedAt = CURRENT_TIMESTAMP WHERE id = $3 RETURNING id, name, description", payload.Name, payload.Description, payload.ID).Scan(
+		&role.ID,
+		&role.Name,
+		&role.Description,
+	)
 	if err != nil {
 		if rbErr := tx.Rollback(); rbErr != nil {
-			return fmt.Errorf("insert error: %v, rollback error: %v", err, rbErr)
+			return nil, fmt.Errorf("insert error: %v, rollback error: %v", err, rbErr)
 		}
-		return err
+		return nil, err
 	}
 
 	if err = tx.Commit(); err != nil {
-		return err
+		return &role, err
 	}
 
-	return err
+	return &role, err
 }
 
 func (s *Store) DeleteRole(id int) error {

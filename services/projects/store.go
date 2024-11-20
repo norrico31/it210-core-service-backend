@@ -558,8 +558,6 @@ func (s *Store) ProjectUpdate(payload entities.ProjectUpdatePayload) (map[string
 			return nil, err
 		}
 	}
-	fmt.Printf("payload dateStarted?: %s", payload.DateStarted)
-	fmt.Printf("payload progress?: %d", payload.Progress)
 
 	// Update project fields based on the payload
 	if payload.Name != "" {

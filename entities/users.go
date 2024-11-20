@@ -18,7 +18,7 @@ type User struct {
 	FirstName    string     `json:"firstName"`
 	Age          int        `json:"age"`
 	LastName     string     `json:"lastName"`
-	Email        string     `json:"email"`
+	Email        string     `json:"e-mail"`
 	Password     string     `json:"-"`
 	LastActiveAt *time.Time `json:"lastActiveAt"`
 	CreatedAt    time.Time  `json:"createdAt"`
@@ -32,13 +32,13 @@ type User struct {
 type UserRegisterPayload struct {
 	FirstName string `json:"firstName" validate:"required"`
 	LastName  string `json:"lastName" validate:"required"`
-	Email     string `json:"email" validate:"required,email"`
+	Email     string `json:"e-mail" validate:"required,email"`
 	Password  string `json:"password" validate:"required,min=3,max=130"`
 }
 
 type UserUpdatePayload struct {
 	FirstName string `json:"firstName" validate:"required"`
 	LastName  string `json:"lastName" validate:"required"`
-	Email     string `json:"email" validate:"required,email"`
+	Email     string `json:"e-mail" validate:"required,email"`
 	Password  string `json:"password,omitempty"` // Optional, for password update
 }
