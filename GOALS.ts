@@ -14,3 +14,4 @@
 // roleId
 
 
+// WHEN SOFT DELETE. HOW TO PUT THE userId who deleted it?

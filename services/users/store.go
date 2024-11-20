@@ -45,7 +45,7 @@ func (s *Store) GetUsers() ([]*entities.User, error) {
 
         FROM users u
 		LEFT JOIN roles r ON r.id = u.roleId
-        LEFT JOIN users_projects up ON u.id = up.user_id
+        LEFT JOIN users_projects up ON up.deletedAt IS NULL AND u.id = up.user_id
         LEFT JOIN projects p ON up.project_id = p.id
         WHERE u.deletedAt IS NULL
         ORDER BY u.id, p.id;
@@ -393,7 +393,7 @@ func (s *Store) UpdateUser(userId int, user entities.UserUpdatePayload, projectI
 	}
 
 	// Delete existing in users_projects
-	_, err = tx.Exec(`DELETE FROM users_projects WHERE user_id = $1`, userId)
+	_, err = tx.Exec(`UPDATE users_projects SET deletedAt = CURRENT_TIMESTAMP, deletedBy = $1 WHERE user_id = $1`, userId)
 	if err != nil {
 		tx.Rollback()
 		return fmt.Errorf("failed to clear project associations: %v", err)
@@ -401,10 +401,14 @@ func (s *Store) UpdateUser(userId int, user entities.UserUpdatePayload, projectI
 
 	// Create new user with projects in users_projects
 	for _, projID := range projectIDs {
+		// _, err = tx.Exec(`
+		// 	INSERT INTO users_projects (user_id, project_id)
+		// 	VALUES ($1, $2)
+		// `, userId, projID)
 		_, err = tx.Exec(`
-			INSERT INTO users_projects (user_id, project_id)
+			UPDATE users_projects SET deletedAt = NULL, deletedBy = NULL WHERE user_id = $1
 			VALUES ($1, $2)
-		`, userId, projID)
+		`, userId)
 		if err != nil {
 			tx.Rollback()
 			return fmt.Errorf("failed to associate user with project %d: %v", projID, err)
@@ -418,9 +422,26 @@ func (s *Store) UpdateUser(userId int, user entities.UserUpdatePayload, projectI
 	return nil
 }
 
-func (s *Store) DeleteUser(id int) error {
-	_, err := s.db.Exec("DELETE FROM users WHERE id = ?", id)
-	return err
+func (s *Store) DeleteUser(userId int) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec("UPDATE users SET deletedAt = CURRENT_TIMESTAMP, deletedBy = $1 WHERE id = $1", userId)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to delete user with project %d: %v", userId, err)
+	}
+	_, err = tx.Exec("UPDATE users_projects SET deletedAt = CURRENT_TIMESTAMP, deletedBy = $1 WHERE user_id = $1", userId)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to delete user with project %d: %v", userId, err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("transaction commit error: %v", err)
+	}
+	return nil
 }
 
 func (s *Store) SetUserActive(userId int) error {
