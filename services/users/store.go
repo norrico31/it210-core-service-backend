@@ -25,17 +25,27 @@ func (s *Store) GetUsers() ([]*entities.User, error) {
             u.lastName,
             u.email,
             u.age,
+			u.roleId,
             u.lastActiveAt,
             u.createdAt,
             u.updatedAt,
             u.deletedAt,
+
+			r.id AS role_id,
+			r.name AS role_name,
+			r.description AS role_description,
+			r.createdAt AS role_created_at,
+			r.updatedAt AS role_updated_at,
+
             p.id AS project_id,
             p.name AS project_name,
             p.description AS project_description,
             p.createdAt AS project_createdAt,
             p.updatedAt AS project_updatedAt,
             p.deletedAt AS project_deletedAt
+
         FROM users u
+		LEFT JOIN roles r ON r.id = u.roleId
         LEFT JOIN users_projects up ON u.id = up.user_id
         LEFT JOIN projects p ON up.project_id = p.id
         WHERE u.deletedAt IS NULL
@@ -50,28 +60,36 @@ func (s *Store) GetUsers() ([]*entities.User, error) {
 
 	for rows.Next() {
 		var (
-			userID             int
-			projectID          sql.NullInt32
-			projectName        sql.NullString
-			projectDescription sql.NullString
-			projectCreatedAt   sql.NullTime
-			projectUpdatedAt   sql.NullTime
-			projectDeletedAt   sql.NullTime
-			user               entities.User
-			project            entities.Project
+			userID                       int
+			projectID                    sql.NullInt32
+			projectName                  sql.NullString
+			projectDescription           sql.NullString
+			projectCreatedAt             sql.NullTime
+			projectUpdatedAt             sql.NullTime
+			projectDeletedAt             sql.NullTime
+			user                         entities.User
+			project                      entities.Project
+			roleId                       *int
+			roleName, roleDescription    *string
+			roleCreatedAt, roleUpdatedAt *time.Time
 		)
 
-		// Scan user and project data from the row
 		err := rows.Scan(
 			&userID,
 			&user.FirstName,
 			&user.LastName,
 			&user.Email,
 			&user.Age,
+			&user.RoleId,
 			&user.LastActiveAt,
 			&user.CreatedAt,
 			&user.UpdatedAt,
 			&user.DeletedAt,
+			&roleId,
+			&roleName,
+			&roleDescription,
+			&roleCreatedAt,
+			&roleUpdatedAt,
 			&projectID,
 			&projectName,
 			&projectDescription,
@@ -82,6 +100,15 @@ func (s *Store) GetUsers() ([]*entities.User, error) {
 		if err != nil {
 			log.Printf("Failed to scan user or project: %v", err)
 			continue
+		}
+		if roleId != nil {
+			user.Role = entities.Role{
+				ID:          *roleId,
+				Name:        *roleName,
+				Description: *roleDescription,
+				CreatedAt:   *roleCreatedAt,
+				UpdatedAt:   *roleUpdatedAt,
+			}
 		}
 
 		// Check if the user already exists in the map

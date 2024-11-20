@@ -20,6 +20,7 @@ type User struct {
 	LastName     string     `json:"lastName"`
 	Email        string     `json:"e-mail"`
 	RoleId       *int       `json:"roleId"`
+	Role         Role       `json:"role"`
 	Password     string     `json:"-"`
 	LastActiveAt *time.Time `json:"lastActiveAt"`
 	CreatedAt    time.Time  `json:"createdAt"`
