@@ -73,6 +73,14 @@ func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	password, err := utils.HashPassword("secret123")
+	if err != nil {
+		return
+	}
+
+	// FEATURE
+	// SEND AN EMAIL FOR THE PASSWORD OF USER
+	// ACTIVATE THE ACCOUNT (MAYBE?)
 	err = h.store.CreateUser(entities.UserCreatePayload{
 		FirstName:  payload.FirstName,
 		LastName:   payload.LastName,
@@ -80,6 +88,7 @@ func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		Age:        payload.Age,
 		RoleId:     payload.RoleId,
 		ProjectIDS: payload.ProjectIDS,
+		Password:   password,
 	})
 
 	if err != nil {
@@ -91,6 +100,7 @@ func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleUpdateUser(w http.ResponseWriter, r *http.Request) {
+	// Parse user ID from URL
 	vars := mux.Vars(r)
 	str, ok := vars["userId"]
 	if !ok {
@@ -104,36 +114,81 @@ func (h *Handler) HandleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Parse payload
 	var payload entities.UserUpdatePayload
-
 	if err := utils.ParseJSON(r, &payload); err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
 		return
 	}
 
-	user := entities.User{
-		ID:        userId,
-		FirstName: payload.FirstName,
-		LastName:  payload.LastName,
-		Email:     payload.Email,
-	}
-
-	if payload.Password != "" {
-		hashedPassword, err := utils.HashPassword(payload.Password)
-		if err != nil {
-			utils.WriteError(w, http.StatusBadRequest, err)
-			return
-		}
-		user.Password = hashedPassword
-	}
-
-	err = h.store.UpdateUser(user)
+	// Fetch existing user
+	userExist, err := h.store.GetUserById(userId)
 	if err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, err)
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to fetch user: %v", err))
 		return
 	}
 
-	utils.WriteJSON(w, http.StatusOK, nil)
+	// Prepare updated user
+	user := entities.UserUpdatePayload{}
+	if payload.FirstName != nil {
+		user.FirstName = payload.FirstName
+	} else {
+		user.FirstName = &userExist.FirstName
+	}
+
+	if payload.LastName != nil {
+		user.LastName = payload.LastName
+	} else {
+		user.LastName = &userExist.LastName
+	}
+
+	if payload.Age != nil {
+		user.Age = payload.Age
+	} else {
+		user.Age = &userExist.Age
+	}
+
+	if payload.Email != nil {
+		user.Email = payload.Email
+	} else {
+		user.Email = &userExist.Email
+	}
+
+	if payload.RoleId != nil {
+		user.RoleId = payload.RoleId
+	} else {
+		user.RoleId = userExist.RoleId
+	}
+
+	if payload.Password != nil {
+		hashedPassword, err := utils.HashPassword(*payload.Password)
+		if err != nil {
+			utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("problem hashing password"))
+			return
+		}
+		user.Password = &hashedPassword
+	} else {
+		user.Password = &userExist.Password
+	}
+
+	// Handle project associations
+	var projectIDs []int
+	if payload.ProjectIDS != nil {
+		projectIDs = *payload.ProjectIDS
+	} else {
+		for _, proj := range userExist.Projects {
+			projectIDs = append(projectIDs, proj.ID)
+		}
+	}
+
+	// Update user in the store
+	err = h.store.UpdateUser(userId, user, projectIDs)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to update user: %v", err))
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, map[string]string{"message": "User updated successfully"})
 }
 
 func (h *Handler) HandleDeleteUser(w http.ResponseWriter, r *http.Request) {

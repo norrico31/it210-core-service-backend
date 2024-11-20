@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/norrico31/it210-core-service-backend/entities"
-	"github.com/norrico31/it210-core-service-backend/utils"
 )
 
 type Store struct {
@@ -318,11 +317,6 @@ func (s *Store) CreateUser(payload entities.UserCreatePayload) error {
 		return fmt.Errorf("failed to begin transaction: %v", err)
 	}
 
-	password, err := utils.HashPassword("secret123")
-	if err != nil {
-		return err
-	}
-
 	var userID int
 	err = tx.QueryRow(`
 		INSERT INTO users (firstName, lastName, email, roleId, age, password, createdAt, updatedAt) 
@@ -334,7 +328,7 @@ func (s *Store) CreateUser(payload entities.UserCreatePayload) error {
 		payload.Email,
 		payload.RoleId,
 		payload.Age,
-		password,
+		payload.Password,
 		time.Now(),
 		time.Now(),
 	).Scan(&userID)
@@ -372,9 +366,56 @@ func (s *Store) CreateUser(payload entities.UserCreatePayload) error {
 	return nil
 }
 
-func (s *Store) UpdateUser(user entities.User) error {
-	_, err := s.db.Exec("UPDATE users SET firstName = ?, lastName = ?, email = ?, password = ? WHERE id = ?", user.FirstName, user.LastName, user.Email, user.Password, user.ID)
-	return err
+func (s *Store) UpdateUser(userId int, user entities.UserUpdatePayload, projectIDs []int) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %v", err)
+	}
+
+	// Update user
+	_, err = tx.Exec(`
+		UPDATE users
+		SET firstName = $1, lastName = $2, email = $3, roleId = $4, age = $5, password = $6, updatedAt = $7
+		WHERE id = $8
+	`,
+		user.FirstName,
+		user.LastName,
+		user.Email,
+		user.RoleId,
+		user.Age,
+		user.Password,
+		time.Now(),
+		userId,
+	)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to update user: %v", err)
+	}
+
+	// Delete existing in users_projects
+	_, err = tx.Exec(`DELETE FROM users_projects WHERE user_id = $1`, userId)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to clear project associations: %v", err)
+	}
+
+	// Create new user with projects in users_projects
+	for _, projID := range projectIDs {
+		_, err = tx.Exec(`
+			INSERT INTO users_projects (user_id, project_id)
+			VALUES ($1, $2)
+		`, userId, projID)
+		if err != nil {
+			tx.Rollback()
+			return fmt.Errorf("failed to associate user with project %d: %v", projID, err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("transaction commit error: %v", err)
+	}
+
+	return nil
 }
 
 func (s *Store) DeleteUser(id int) error {
