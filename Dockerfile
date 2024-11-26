@@ -39,7 +39,7 @@ COPY entrypoint.sh /app/core-service/
 # Copy the migration SQL files
 COPY --from=builder /app/cmd/migrate/migrations /app/core-service/cmd/migrate/migrations
 
-RUN chmod +x /app/core-service/migrate /app/core-service/seed /app/core-service/core-service
+RUN chmod +x /app/core-service/entrypoint.sh /app/core-service/migrate /app/core-service/seed /app/core-service/core-service
 
 EXPOSE 81 8081
 

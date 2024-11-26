@@ -22,9 +22,6 @@ until nc -z "${DB_HOST}" "${DB_PORT}"; do
 done
 echo "PostgreSQL is ready!"
 
-
-echo "PostgreSQL is up!"
-
 DATABASE_URL="postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
 
 # Run migrations
@@ -45,4 +42,4 @@ fi
 
 # Start the core service
 echo "ENTRYPOINT: Starting core service..."
-exec /app/core-service/core-service || { echo "Core service failed to start"; }
+exec /app/core-service/core-service || { echo "Core service failed to start"; exit 1; }
