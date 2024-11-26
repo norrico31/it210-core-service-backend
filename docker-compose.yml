@@ -7,16 +7,16 @@ services:
       dockerfile: Dockerfile
     environment:
       - JWT_SECRET=${JWT_SECRET}
-      - PGHOST=${PGHOST}  # Using PGHOST as DB_HOST
+      - PGHOST=${PGHOST}  
       - PORT=${PORT}
       - PGPORT=${PGPORT}
-      - PGUSER=${PGUSER}  # Using PGUSER
+      - PGUSER=${PGUSER}  
       - PGPASSWORD=${PGPASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}  # Using PGDATABASE
+      - POSTGRES_DB=${POSTGRES_DB}  
       - DB_ADDRESS=${DB_ADDRESS}
       - GATEWAY_SERVICE_PORT=${GATEWAY_SERVICE_PORT}
-      - DATABASE_URL=${DATABASE_URL}  # Using the full database URL
-      - DATABASE_PUBLIC_URL=${DATABASE_PUBLIC_URL}  # Using the full public database URL
+      - DATABASE_URL=${DATABASE_URL}  
+      - DATABASE_PUBLIC_URL=${DATABASE_PUBLIC_URL} 
     ports:
       - "8080:8080"
     depends_on:
