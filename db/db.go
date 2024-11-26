@@ -2,7 +2,6 @@ package db
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 
 	_ "github.com/lib/pq"
@@ -12,9 +11,10 @@ import (
 
 // note in dev mode: change the 3rd arg to localhost or 127.0.0.1 in docker image use config.Envs.DBUser
 func NewPostgresStorage() (*sql.DB, error) {
-	connStr := fmt.Sprintf("user=%s password=%s host=%s dbname=%s port=%d sslmode=disable",
-		config.Envs.DBUser, config.Envs.DBPassword, "localhost", config.Envs.DBName, 5432)
-	db, err := sql.Open("postgres", connStr)
+	prod := config.Envs.DATABASE_URL
+	// staging := fmt.Sprintf("user=%s password=%s host=%s dbname=%s port=%d sslmode=disable",
+	// 	config.Envs.DBUser, config.Envs.DBPassword, "localhost", config.Envs.DBName, 5432)
+	db, err := sql.Open("postgres", prod)
 	if err != nil {
 		log.Fatal(err)
 	}

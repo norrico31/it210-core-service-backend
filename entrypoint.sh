@@ -5,24 +5,26 @@ echo "ENTRYPOINT: Starting entrypoint..."
 
 echo "Environment Variables:"
 echo "JWT_SECRET=${JWT_SECRET}"
-echo "DB_HOST=${DB_HOST}"
+echo "PGHOST=${PGHOST}"
 echo "PORT=${PORT}"
-echo "DB_PORT=${DB_PORT}"
-echo "DB_USER=${DB_USER}"
-echo "DB_PASSWORD=${DB_PASSWORD}"
-echo "DB_NAME=${DB_NAME}"
+echo "PGPORT=${PGPORT}"
+echo "PGUSER=${PGUSER}"
+echo "PGPASSWORD=${PGPASSWORD}"
+echo "POSTGRES_DB=${POSTGRES_DB}"
 echo "DB_ADDRESS=${DB_ADDRESS}"
 echo "GATEWAY_SERVICE_PORT=${GATEWAY_SERVICE_PORT}"
 
 # Wait for PostgreSQL to be ready
-echo "Waiting for PostgreSQL at ${DB_HOST}:${DB_PORT}..."
-until nc -z "${DB_HOST}" "${DB_PORT}"; do
+echo "Waiting for PostgreSQL at ${PGHOST}:${PGPORT}..."
+until nc -z "${PGHOST}" "${PGPORT}"; do
   echo "PostgreSQL is unavailable - retrying in 2 seconds"
   sleep 2
 done
 echo "PostgreSQL is ready!"
 
-DATABASE_URL="postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+DATABASE_URL="postgres://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${POSTGRES_DB}"
+
+echo $DATABASE_URL
 
 # Run migrations
 if [ -x /app/core-service/migrate ]; then

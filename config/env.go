@@ -17,6 +17,7 @@ type Config struct {
 	JWTExpirationInSeconds int64
 	JWTSecret              string
 	GatewayPort            string
+	DATABASE_URL           string
 }
 
 var Envs = initConfig()
@@ -33,6 +34,7 @@ func initConfig() Config {
 		DBName:                 getEnv("POSTGRES_DB", "railway"),
 		JWTSecret:              getEnv("JWT_SECRET", "IS-IT_REALL-A_SECRET-?~JWT-NOT_SO-SURE"),
 		JWTExpirationInSeconds: getEnvAsInt("JWT_EXP", 3600*24*7),
+		DATABASE_URL:           getEnv("DATABASE_URL", ""),
 	}
 }
 

@@ -7,12 +7,12 @@ services:
       dockerfile: Dockerfile
     environment:
       - JWT_SECRET=${JWT_SECRET}
-      - DB_HOST=${PGHOST}  # Using PGHOST as DB_HOST
+      - PGHOST=${PGHOST}  # Using PGHOST as DB_HOST
       - PORT=${PORT}
-      - DB_PORT=${PGPORT}
-      - DB_USER=${PGUSER}  # Using PGUSER
-      - DB_PASSWORD=${PGPASSWORD}
-      - DB_NAME=${PGDATABASE}  # Using PGDATABASE
+      - PGPORT=${PGPORT}
+      - PGUSER=${PGUSER}  # Using PGUSER
+      - PGPASSWORD=${PGPASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}  # Using PGDATABASE
       - DB_ADDRESS=${DB_ADDRESS}
       - GATEWAY_SERVICE_PORT=${GATEWAY_SERVICE_PORT}
       - DATABASE_URL=${DATABASE_URL}  # Using the full database URL
@@ -30,7 +30,7 @@ services:
   postgres:
     image: postgres:latest
     environment:
-      - POSTGRES_DB=${PGDATABASE}
+      - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${PGUSER}
       - POSTGRES_PASSWORD=${PGPASSWORD}
     volumes:
