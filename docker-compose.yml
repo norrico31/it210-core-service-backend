@@ -18,7 +18,7 @@ services:
       - DATABASE_URL=${DATABASE_URL}  # Using the full database URL
       - DATABASE_PUBLIC_URL=${DATABASE_PUBLIC_URL}  # Using the full public database URL
     ports:
-      - "8081:8081"
+      - "8080:8080"
     depends_on:
       postgres:
         condition: service_healthy

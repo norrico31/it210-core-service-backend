@@ -41,6 +41,6 @@ COPY --from=builder /app/cmd/migrate/migrations /app/core-service/cmd/migrate/mi
 
 RUN chmod +x /app/core-service/entrypoint.sh /app/core-service/migrate /app/core-service/seed /app/core-service/core-service
 
-EXPOSE 81 8081
+EXPOSE 80 8080
 
 ENTRYPOINT ["/app/core-service/entrypoint.sh"]

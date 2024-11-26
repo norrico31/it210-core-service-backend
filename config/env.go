@@ -26,7 +26,7 @@ func initConfig() Config {
 	godotenv.Load()
 	return Config{
 		PublicHost:             getEnv("DATABASE_URL", "http://localhost"),
-		Port:                   getEnv("PORT", "8081"),
+		Port:                   getEnv("PORT", "8080"),
 		DBUser:                 getEnv("POSTGRES_USER", "postgres"),
 		DBPassword:             getEnv("PGPASSWORD", "dauVXazugjuqcUMFCPFTIQxUSHVOjIrW"),
 		DBAddress:              getEnv("DB_ADDRESS", "postgres"),
