@@ -13,7 +13,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer db.Close()
-	server := api.NewApiServer(":8082", db)
+	server := api.NewApiServer(":8080", db)
 	if err := server.Run(); err != nil {
 		log.Fatal(err)
 	}
