@@ -27,7 +27,7 @@ func initConfig() Config {
 		PublicHost:             getEnv("DATABASE_URL", "http://localhost"),
 		Port:                   getEnv("PORT", "8081"),
 		DBUser:                 getEnv("POSTGRES_USER", "postgres"),
-		DBPassword:             getEnv("PGPASSWORD", ""),
+		DBPassword:             getEnv("PGPASSWORD", "dauVXazugjuqcUMFCPFTIQxUSHVOjIrW"),
 		DBAddress:              getEnv("DB_ADDRESS", "postgres"),
 		GatewayPort:            getEnv("GATEWAY_SERVICE_PORT", "8080"),
 		DBName:                 getEnv("POSTGRES_DB", "railway"),
