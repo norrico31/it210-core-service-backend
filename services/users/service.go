@@ -22,6 +22,10 @@ func NewHandler(store entities.UserStore) *Handler {
 }
 
 func (h *Handler) handleGetUsers(w http.ResponseWriter, r *http.Request) {
+	for key, values := range r.Header {
+		fmt.Printf("Header: %s, Value: %v\n", key, values)
+	}
+
 	users, err := h.store.GetUsers()
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
