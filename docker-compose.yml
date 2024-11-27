@@ -6,45 +6,45 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      JWT_SECRET: "${JWT_SECRET}"
-      PGHOST: "${PGHOST}"
-      PORT: "${PORT}"
-      PGPORT: "${PGPORT}"
-      PGUSER: "${PGUSER}"
-      PGPASSWORD: "${PGPASSWORD}"
-      POSTGRES_DB: "${POSTGRES_DB}"
-      DB_ADDRESS: "${DB_ADDRESS}"
-      RAILWAY_PRIVATE_DOMAIN: "${RAILWAY_PRIVATE_DOMAIN}"
-      RAILWAY_TCP_PROXY_PORT: "${RAILWAY_TCP_PROXY_PORT}"
-      GATEWAY_SERVICE_PORT: "${GATEWAY_SERVICE_PORT}"
-      DATABASE_URL: "postgresql://postgres:${PGPASSWORD}@postgres.railway.internal:58308/railway"
-      DATABASE_PUBLIC_URL: "postgresql://${PGUSER}:${PGPASSWORD}@${RAILWAY_TCP_PROXY_DOMAIN}:${RAILWAY_TCP_PROXY_PORT}/${POSTGRES_DB}"
+      JWT_SECRET: "${JWT_SECRET}" 
+      PGHOST: "${PGHOST}" 
+      PORT: "${PORT}" 
+      PGPORT: "${PGPORT}" 
+      PGUSER: "${POSTGRES_USER}" 
+      PGPASSWORD: "${POSTGRES_PASSWORD}" 
+      POSTGRES_DB: "${POSTGRES_DB}" 
+      DB_ADDRESS: "${DB_ADDRESS}" 
+      RAILWAY_PRIVATE_DOMAIN: "${RAILWAY_PRIVATE_DOMAIN}" 
+      RAILWAY_TCP_PROXY_PORT: "${RAILWAY_TCP_PROXY_PORT}" 
+      GATEWAY_SERVICE_PORT: "${GATEWAY_SERVICE_PORT}" 
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${PGHOST}:${PGPORT}/${POSTGRES_DB}" 
+      DATABASE_PUBLIC_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${PGHOST}:${RAILWAY_TCP_PROXY_PORT}/${POSTGRES_DB}" 
     ports:
-      - "8080:8080"
+      - "8080:8080" 
     depends_on:
       postgres:
-        condition: service_healthy
+        condition: service_healthy 
     volumes:
-      - ./cmd:/app/cmd
-      - ./entrypoint.sh:/app/core-service/entrypoint.sh
-      - ./cmd/migrate/migrations:/app/core-service/cmd/migrate/migrations
+      - ./cmd:/app/cmd 
+      - ./entrypoint.sh:/app/core-service/entrypoint.sh 
+      - ./cmd/migrate/migrations:/app/core-service/cmd/migrate/migrations 
 
   postgres:
-    image: postgres:latest
+    image: postgres:latest 
     environment:
-      POSTGRES_DB: "${POSTGRES_DB}"
-      POSTGRES_USER: "${PGUSER}"
-      POSTGRES_PASSWORD: "${PGPASSWORD}"
+      POSTGRES_DB: "${POSTGRES_DB}" 
+      POSTGRES_USER: "${POSTGRES_USER}" 
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}" 
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data 
     ports:
-      - "5432:5432"
+      - "5432:5432" 
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"]
-      interval: 5s
-      timeout: 2s
-      retries: 5
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"] 
+      interval: 5s 
+      timeout: 2s 
+      retries: 5 
 
 volumes:
   postgres_data:
-    driver: local
+    driver: local 
