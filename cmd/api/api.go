@@ -27,40 +27,31 @@ func NewApiServer(addr string, db *sql.DB) *APIServer {
 	}
 }
 
+// Request logging middleware
+func logRequest(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Log request details: method, URL, and client IP
+		log.Printf("Request: %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
+		// Call the next handler
+		next.ServeHTTP(w, r)
+	})
+}
+
 // TODO: STILL NOT WORKING IN CONTAINER (PORT VARIES EVERYTIME)
 func (s *APIServer) enforceGatewayOrigin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Construct allowed host based on the config
-		// allowedHost := fmt.Sprintf("%s:%s", s.config.PublicHost, s.config.GatewayPort)
-
-		// fmt.Printf("allowedHost: %v", allowedHost)
-		// fmt.Printf("rHost: %v", r.Host)
-
-		// if r.Host == allowedHost {
-		//			// Allow requests that come from the gateway (127.0.0.1:8080)
-		// 	next.ServeHTTP(w, r)
-		// 	return
-		// }
-
-		// If the request is directly to the auth service (127.0.0.1:8081), return NOT FOUND
-		// if r.Host == fmt.Sprintf("127.0.0.1:%s", s.config.GatewayPort) {
-		// 	http.Error(w, "NOT FOUND", http.StatusNotFound)
-		// 	return
-		// }
-
-		// Optional: Check the referer header as additional verification
-		// if !strings.HasPrefix(r.Referer(), fmt.Sprintf("http://%s", allowedHost)) {
-		// 	http.Error(w, "NOT FOUND", http.StatusNotFound)
-		// 	return
-		// }
-
-		// Allow request to proceed if it's from the correct gateway
+		// Your existing logic for enforcing gateway origin
 		next.ServeHTTP(w, r)
 	})
 }
 
 func (s *APIServer) Run() {
 	router := mux.NewRouter()
+
+	// Apply the request logging middleware
+	router.Use(logRequest)
+
+	// Apply the gateway origin enforcement middleware
 	router.Use(s.enforceGatewayOrigin)
 
 	subrouterv1 := router.PathPrefix("/api/v1/core").Subrouter()
@@ -80,11 +71,15 @@ func (s *APIServer) Run() {
 	projectStore := projects.NewStore(s.db)
 	projecthandler := projects.NewHandler(projectStore)
 	projects.RegisterRoutes(subrouterv1, projecthandler)
+
+	// CORS configuration
 	corsHandler := handlers.CORS(
 		handlers.AllowedOrigins([]string{"*"}), // You can replace "*" with specific allowed origins if needed
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
 		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
 	)(router)
+
+	// Create and start the server
 	server := &http.Server{
 		Addr:           ":8080",
 		Handler:        corsHandler,
