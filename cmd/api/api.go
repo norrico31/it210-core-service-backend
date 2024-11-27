@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/norrico31/it210-core-service-backend/config"
 	"github.com/norrico31/it210-core-service-backend/services/projects"
@@ -58,7 +59,7 @@ func (s *APIServer) enforceGatewayOrigin(next http.Handler) http.Handler {
 	})
 }
 
-func (s *APIServer) Run() error {
+func (s *APIServer) Run() {
 	router := mux.NewRouter()
 	router.Use(s.enforceGatewayOrigin)
 
@@ -79,7 +80,18 @@ func (s *APIServer) Run() error {
 	projectStore := projects.NewStore(s.db)
 	projecthandler := projects.NewHandler(projectStore)
 	projects.RegisterRoutes(subrouterv1, projecthandler)
-
+	corsHandler := handlers.CORS(
+		handlers.AllowedOrigins([]string{"*"}), // You can replace "*" with specific allowed origins if needed
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
+		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
+	)(router)
+	server := &http.Server{
+		Addr:           ":8080",
+		Handler:        corsHandler,
+		MaxHeaderBytes: 1 << 20, // 1 MB for header size, adjust as needed
+	}
 	log.Println("Core Service: Running on port ", s.addr)
-	return http.ListenAndServe(s.addr, router)
+	if err := server.ListenAndServe(); err != nil {
+		log.Fatalf("could not start server: %v", err)
+	}
 }

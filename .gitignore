@@ -2,3 +2,12 @@
 
 bin
 tmp
+**/vendor/**
+
+*.out
+*.test
+
+.vscode/
+.idea/
+
+*.local
