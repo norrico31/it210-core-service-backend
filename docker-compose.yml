@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     environment:
       JWT_SECRET: "${JWT_SECRET}" 
-      PGHOST: "${PGHOST}" 
+      PGHOST: "postgres"
       PORT: "${PORT}" 
       PGPORT: "${PGPORT}" 
       PGUSER: "${POSTGRES_USER}" 
@@ -17,8 +17,7 @@ services:
       RAILWAY_PRIVATE_DOMAIN: "${RAILWAY_PRIVATE_DOMAIN}" 
       RAILWAY_TCP_PROXY_PORT: "${RAILWAY_TCP_PROXY_PORT}" 
       GATEWAY_SERVICE_PORT: "${GATEWAY_SERVICE_PORT}" 
-      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${PGHOST}:${PGPORT}/${POSTGRES_DB}" 
-      DATABASE_PUBLIC_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${PGHOST}:${RAILWAY_TCP_PROXY_PORT}/${POSTGRES_DB}" 
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=require"
     ports:
       - "8080:8080" 
     depends_on:

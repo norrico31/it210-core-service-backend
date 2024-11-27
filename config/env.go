@@ -34,7 +34,7 @@ func initConfig() Config {
 		DBName:                 getEnv("POSTGRES_DB", "railway"),
 		JWTSecret:              getEnv("JWT_SECRET", "IS-IT_REALL-A_SECRET-?~JWT-NOT_SO-SURE"),
 		JWTExpirationInSeconds: getEnvAsInt("JWT_EXP", 3600*24*7),
-		DATABASE_URL:           getEnv("DATABASE_PUBLIC_URL", "postgresql://postgres:dauVXazugjuqcUMFCPFTIQxUSHVOjIrW@junction.proxy.rlwy.net:58308/railway"),
+		DATABASE_URL:           getEnv("DATABASE_URL", ""),
 	}
 }
 

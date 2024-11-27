@@ -4,18 +4,21 @@ set -e
 echo "ENTRYPOINT: Starting entrypoint..."
 
 echo "Environment Variables:"
+echo "JWT_SECRET=${JWT_SECRET}"
 echo "PGHOST=${PGHOST}"
+echo "PORT=${PORT}"
 echo "PGPORT=${PGPORT}"
 echo "PGUSER=${PGUSER}"
+echo "PGPASSWORD=${PGPASSWORD}"
 echo "POSTGRES_DB=${POSTGRES_DB}"
+echo "DB_ADDRESS=${DB_ADDRESS}"
 echo "GATEWAY_SERVICE_PORT=${GATEWAY_SERVICE_PORT}"
 echo "RAILWAY_TCP_PROXY_PORT=${RAILWAY_TCP_PROXY_PORT}"
 echo "RAILWAY_PRIVATE_DOMAIN=${RAILWAY_PRIVATE_DOMAIN}"
 
-DATABASE_URL="postgres://${PGUSER}:${PGPASSWORD}@${RAILWAY_PRIVATE_DOMAIN}:${PGPORT}/${POSTGRES_DB}"
-echo "DB URL: ${DATABASE_URL}"
+DATABASE_URL=postgresql://${PGUSER}:${PGPASSWORD}@postgres:${PGPORT}/${POSTGRES_DB}
 
-echo $DATABASE_URL
+echo "FUCK: $DATABASE_URL"
 
 # Wait for PostgreSQL to be ready
 echo "Waiting for PostgreSQL at ${PGHOST}:${PGPORT}..."
