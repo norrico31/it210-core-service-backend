@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     environment:
       JWT_SECRET: "${JWT_SECRET}"
-      PGHOST: "${RAILWAY_PRIVATE_DOMAIN}"
+      PGHOST: "${PGHOST}"
       PORT: "${PORT}"
       PGPORT: "${PGPORT}"
       PGUSER: "${PGUSER}"
