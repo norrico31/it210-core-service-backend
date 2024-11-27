@@ -52,4 +52,4 @@ fi
 
 # Start the service
 echo "ENTRYPOINT: Starting core service..."
-exec "$@"
+exec /app/core-service/core-service || { echo "Core service failed to start"; exit 1; }
