@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/norrico31/it210-core-service-backend/cmd/api"
@@ -13,6 +14,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer db.Close()
+	fmt.Println("PostgreSQL connection established!")
 	server := api.NewApiServer(":8080", db)
 	if err := server.Run(); err != nil {
 		log.Fatal(err)

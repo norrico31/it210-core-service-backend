@@ -12,7 +12,6 @@ type Config struct {
 	Port                   string
 	DBUser                 string
 	DBPassword             string
-	DBAddress              string
 	DBName                 string
 	JWTExpirationInSeconds int64
 	JWTSecret              string
@@ -25,16 +24,15 @@ var Envs = initConfig()
 func initConfig() Config {
 	godotenv.Load()
 	return Config{
-		PublicHost:             getEnv("DATABASE_URL", "http://localhost"),
+		PublicHost:             getEnv("DATABASE_URL", ""),
 		Port:                   getEnv("PORT", "8080"),
-		DBUser:                 getEnv("POSTGRES_USER", "postgres"),
-		DBPassword:             getEnv("PGPASSWORD", "dauVXazugjuqcUMFCPFTIQxUSHVOjIrW"),
-		DBAddress:              getEnv("DB_ADDRESS", "postgres"),
-		GatewayPort:            getEnv("GATEWAY_SERVICE_PORT", "8080"),
-		DBName:                 getEnv("POSTGRES_DB", "railway"),
+		DBUser:                 getEnv("POSTGRES_USER", ""),
+		DBPassword:             getEnv("PGPASSWORD", ""),
+		GatewayPort:            getEnv("GATEWAY_SERVICE_PORT", ""),
+		DBName:                 getEnv("POSTGRES_DB", ""),
 		JWTSecret:              getEnv("JWT_SECRET", "IS-IT_REALL-A_SECRET-?~JWT-NOT_SO-SURE"),
 		JWTExpirationInSeconds: getEnvAsInt("JWT_EXP", 3600*24*7),
-		DATABASE_URL:           getEnv("DATABASE_URL", ""),
+		DATABASE_URL:           getEnv("DATABASE_PUBLIC_URL", ""),
 	}
 }
 
