@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     environment:
       - JWT_SECRET=${JWT_SECRET}
-      - PGHOST=${PGHOST}  
+      - PGHOST=${PGUSER}  
       - PORT=${PORT}
       - PGPORT=${PGPORT}
       - PGUSER=${PGUSER}  

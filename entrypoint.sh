@@ -13,6 +13,14 @@ echo "PGPASSWORD=${PGPASSWORD}"
 echo "POSTGRES_DB=${POSTGRES_DB}"
 echo "DB_ADDRESS=${DB_ADDRESS}"
 echo "GATEWAY_SERVICE_PORT=${GATEWAY_SERVICE_PORT}"
+echo "DATABASE_PUBLIC_URL=${DATABASE_PUBLIC_URL}"
+
+DATABASE_URL="postgres://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${POSTGRES_DB}"
+DATABASE_PUBLIC_URL="${DATABASE_PUBLIC_URL}"
+
+echo $DATABASE_PUBLIC_URL
+
+echo $DATABASE_URL
 
 # Wait for PostgreSQL to be ready
 echo "Waiting for PostgreSQL at ${PGHOST}:${PGPORT}..."
@@ -21,10 +29,6 @@ until nc -z "${PGHOST}" "${PGPORT}"; do
   sleep 2
 done
 echo "PostgreSQL is ready!"
-
-DATABASE_URL="postgres://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${POSTGRES_DB}"
-
-echo $DATABASE_URL
 
 # Run migrations
 if [ -x /app/core-service/migrate ]; then
