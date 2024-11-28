@@ -1,13 +1,17 @@
 package tasks
 
-import "github.com/gorilla/mux"
+import (
+	"github.com/gorilla/mux"
+	"github.com/norrico31/it210-core-service-backend/utils"
+)
 
 func RegisterRoutes(router *mux.Router, h *Handler) {
-	router.HandleFunc("/tasks", h.handleGetTasks).Methods("GET")
-	router.HandleFunc("/tasks/deleted", h.handleGetDeletedTasks).Methods("GET")
-	router.HandleFunc("/tasks", h.handleTaskCreate).Methods("POST")
-	router.HandleFunc("/tasks/{taskId}", h.handleGetTask).Methods("GET")
-	router.HandleFunc("/tasks/{taskId}", h.handleTaskUpdate).Methods("PUT")
-	router.HandleFunc("/tasks/{taskId}", h.handleTaskDelete).Methods("DELETE")
-	router.HandleFunc("/tasks/{taskId}/restore", h.handleTaskRestore).Methods("PUT")
+	utils.SecureRoute(router, "/tasks", h.handleGetTasks, "GET")
+	utils.SecureRoute(router, "/tasks/deleted", h.handleGetDeletedTasks, "GET")
+	utils.SecureRoute(router, "/tasks", h.handleTaskCreate, "POST")
+	utils.SecureRoute(router, "/tasks/{taskId}", h.handleGetTask, "GET")
+	utils.SecureRoute(router, "/tasks/{taskId}", h.handleTaskUpdate, "PUT")
+	utils.SecureRoute(router, "/tasks/{taskId}", h.handleTaskDelete, "DELETE")
+	utils.SecureRoute(router, "/tasks/{taskId}/restore", h.handleTaskRestore, "PUT")
+
 }

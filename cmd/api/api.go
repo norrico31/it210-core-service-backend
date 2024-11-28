@@ -27,12 +27,9 @@ func NewApiServer(addr string, db *sql.DB) *APIServer {
 	}
 }
 
-// Request logging middleware
 func logRequest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Log request details: method, URL, and client IP
 		log.Printf("Request: %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
-		// Call the next handler
 		next.ServeHTTP(w, r)
 	})
 }

@@ -1,6 +1,7 @@
 package users
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -19,6 +20,42 @@ type Handler struct {
 
 func NewHandler(store entities.UserStore) *Handler {
 	return &Handler{store: store}
+}
+
+func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
+	payload := entities.UserLoginPayload{}
+
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "invalid credentials", http.StatusBadRequest)
+		return
+	}
+
+	if payload.Email == "" || payload.Password == "" {
+		http.Error(w, "invalid credentials", http.StatusBadRequest)
+		return
+	}
+
+	token, user, err := h.store.Login(payload)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"user": map[string]interface{}{
+			"id":           user.ID,
+			"firstName":    user.FirstName,
+			"lastName":     user.LastName,
+			"email":        user.Email,
+			"age":          user.Age,
+			"lastActiveAt": user.LastActiveAt,
+			"createdAt":    user.CreatedAt,
+			"updatedAt":    user.UpdatedAt,
+			"deletedAt":    user.DeletedAt,
+		},
+		"token": token,
+	})
 }
 
 func (h *Handler) handleGetUsers(w http.ResponseWriter, r *http.Request) {

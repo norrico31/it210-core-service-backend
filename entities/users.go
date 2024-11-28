@@ -3,6 +3,7 @@ package entities
 import "time"
 
 type UserStore interface {
+	Login(UserLoginPayload) (string, User, error)
 	GetUsers() ([]*User, error)
 	GetUserById(id int) (*User, error)
 	GetUserByEmail(email string) (*User, error)
@@ -31,7 +32,11 @@ type User struct {
 	DeletedBy    *int       `json:"deletedBy,omitempty"`
 }
 
-// TODO REFACTOR
+type UserLoginPayload struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password,omitempty"` // Optional, for password update
+}
+
 type UserCreatePayload struct {
 	FirstName  string  `json:"firstName"`
 	LastName   *string `json:"lastName"`

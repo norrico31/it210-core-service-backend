@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/norrico31/it210-core-service-backend/entities"
+	"github.com/norrico31/it210-core-service-backend/utils"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Store struct {
@@ -15,6 +17,42 @@ type Store struct {
 
 func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
+}
+
+func (s *Store) Login(payload entities.UserLoginPayload) (string, entities.User, error) {
+	user := entities.User{}
+	err := s.db.QueryRow(`
+		SELECT
+			id, firstName, lastName, email, password, age, lastActiveAt, createdAt, updatedAt, deletedAt
+		FROM users 
+		WHERE email = $1 AND deletedAt IS NULL
+	`, payload.Email).Scan(
+		&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Password,
+		&user.Age, &user.LastActiveAt, &user.CreatedAt, &user.UpdatedAt, &user.DeletedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return "", user, fmt.Errorf("user not found")
+	} else if err != nil {
+		return "", user, fmt.Errorf("failed to query user: %v", err)
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(payload.Password))
+	if err != nil {
+		return "", user, fmt.Errorf("invalid password")
+	}
+	fmt.Println(user.ID)
+	token, err := utils.GenerateJWT(user)
+	if err != nil {
+		return "", user, fmt.Errorf("failed to generate token: %v", err)
+	}
+
+	_, err = s.db.Exec(`UPDATE users SET lastActiveAt = NULL WHERE id = $1`, user.ID)
+	if err != nil {
+		log.Printf("Failed to update last active timestamp for user %d: %v", user.ID, err)
+	}
+
+	return token, user, nil
 }
 
 func (s *Store) GetUsers() ([]*entities.User, error) {
@@ -50,6 +88,7 @@ func (s *Store) GetUsers() ([]*entities.User, error) {
         WHERE u.deletedAt IS NULL
         ORDER BY u.id, p.id;
     `)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to query users and projects: %v", err)
 	}
