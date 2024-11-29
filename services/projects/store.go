@@ -36,6 +36,7 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 			u.lastName AS user_last_name,
 			u.email AS user_email,
 			u.age AS user_age,
+			u.roleId user_role_id,
 			u.lastActiveAt AS user_last_active_at,
 			u.createdAt AS user_created_at,
 			u.updatedAt AS user_updated_at,
@@ -66,7 +67,14 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 			ut.createdAt AS user_task_created_at,
 			ut.updatedAt AS user_task_updated_at,
 			ut.deletedAt AS user_task_deleted_at,
-			ut.deletedBy AS user_task_deleted_by
+			ut.deletedBy AS user_task_deleted_by,
+
+			r.id role_id,
+			r.name role_name,
+			r.description role_description,
+			r.createdAt role_created_at,
+			r.updatedAt role_updated_at,
+			r.deletedAt role_deleted_at
 
 		FROM
 			projects p
@@ -80,6 +88,8 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 			statuses s ON s.deletedAt IS NULL AND s.id = t.statusId
 		LEFT JOIN
 			users ut ON ut.deletedAt IS NULL AND ut.id = t.userId
+		LEFT JOIN
+			roles r ON r.deletedAt IS NULL AND r.id = u.roleId
 		WHERE
 			p.deletedAt ` + condition
 
@@ -104,7 +114,7 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 		var statusName, statusDescription *string
 
 		// Use pointers to handle NULL values
-		var userID, userAge, userDeletedBy *int
+		var userID, userAge, userRoleId, userDeletedBy *int
 		var userFirstName, userLastName, userEmail *string
 		var userLastActiveAt, userCreatedAt, userUpdatedAt, userDeletedAt *time.Time
 
@@ -117,19 +127,25 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 		var taskUserFirstName, taskUserLastName, taskUserEmail *string
 		var taskUserLastActiveAt, taskUserCreatedAt, taskUserUpdatedAt, taskUserDeletedAt *time.Time
 
+		var roleId *int
+		var roleName, roleDescription *string
+		var roleCreatedAt, roleUpdatedAt, roleDeletedAt *time.Time
+
 		taskUser := entities.User{}
 
 		// Scan project, user, and task data
 		err = rows.Scan(
 			&projectID, &project.Name, &project.Description, &project.Progress, &project.DateStarted, &project.DateDeadline, &project.CreatedAt, &project.UpdatedAt, &project.DeletedAt, &project.DeletedBy,
 
-			&userID, &userFirstName, &userLastName, &userEmail, &userAge, &userLastActiveAt, &userCreatedAt, &userUpdatedAt, &userDeletedAt, &userDeletedBy,
+			&userID, &userFirstName, &userLastName, &userEmail, &userAge, &userRoleId, &userLastActiveAt, &userCreatedAt, &userUpdatedAt, &userDeletedAt, &userDeletedBy,
 
 			&taskID, &taskTitle, &taskDescription, &taskStatusID, &taskUserID, &taskProjectID, &taskCreatedAt, &taskUpdatedAt, &taskDeletedAt, &taskDeletedBy,
 
 			&statusID, &statusName, &statusDescription,
 
 			&userIDTask, &taskUserFirstName, &taskUserLastName, &taskUserEmail, &taskUserAge, &taskUserLastActiveAt, &taskUserCreatedAt, &taskUserUpdatedAt, &taskUserDeletedAt, &taskUserDeletedBy,
+
+			&roleId, &roleName, &roleDescription, &roleCreatedAt, &roleUpdatedAt, &roleDeletedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan error: %w", err)
@@ -156,6 +172,19 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 			}
 			if userAge != nil {
 				user.Age = *userAge
+			}
+			if userRoleId != nil {
+				user.RoleId = roleId
+
+				role := entities.Role{
+					ID:          *roleId,
+					Name:        *roleName,
+					Description: *roleDescription,
+					CreatedAt:   *roleCreatedAt,
+					UpdatedAt:   *roleUpdatedAt,
+					DeletedAt:   roleDeletedAt,
+				}
+				user.Role = role
 			}
 
 			user.LastActiveAt = userLastActiveAt
