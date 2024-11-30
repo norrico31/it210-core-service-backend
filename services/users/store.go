@@ -83,7 +83,7 @@ func (s *Store) GetUsers() ([]*entities.User, error) {
 
         FROM users u
 		LEFT JOIN roles r ON r.id = u.roleId
-        LEFT JOIN users_projects up ON up.deletedAt IS NULL AND u.id = up.user_id
+        LEFT JOIN users_projects up ON up.deletedAt IS NOT NULL AND u.id = up.user_id
         LEFT JOIN projects p ON up.project_id = p.id
         WHERE u.deletedAt IS NULL
         ORDER BY u.id, p.id;

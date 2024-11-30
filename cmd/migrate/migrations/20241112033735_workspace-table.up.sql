@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS workspaces (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    projectId INT REFERENCES projects(id),
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deletedAt TIMESTAMP,
+    deletedBy INT REFERENCES users(id) ON DELETE
+    SET NULL
+)

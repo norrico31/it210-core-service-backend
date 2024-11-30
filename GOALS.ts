@@ -1,9 +1,11 @@
-// env vars
-// i think not reading the db name or db connections
+// TODOS:
 
+//   task 
+//   priorityId
+
+//   workspace (dragNdrop)
+//   id
+//   name
 
 // PERMISSIONS
 // roleId
-
-
-// WHEN SOFT DELETE. HOW TO PUT THE userId who deleted it? (DONE WITH HEADERS)

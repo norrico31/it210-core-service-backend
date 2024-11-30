@@ -6,11 +6,16 @@ CREATE TABLE IF NOT EXISTS projects (
         progress >= 0
         AND progress <= 100
     ),
-    dateStarted TIMESTAMP,
-    dateDeadline TIMESTAMP,
-    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    deletedAt TIMESTAMP,
-    deletedBy INT REFERENCES users(id) ON DELETE
+    url TEXT,
+    statusId: INT REFERENCES statuses(id) ON DELETE
+    SET NULL,
+        segmentId: INT REFERENCES segment(id) ON DELETE
+    SET NULL,
+        dateStarted TIMESTAMP,
+        dateDeadline TIMESTAMP,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        deletedAt TIMESTAMP,
+        deletedBy INT REFERENCES users(id) ON DELETE
     SET NULL
 );

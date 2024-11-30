@@ -71,6 +71,7 @@ func (s *APIServer) Run() {
 
 	// CORS configuration
 	corsHandler := handlers.CORS(
+		// url frontend (vercel?railway?aws)
 		handlers.AllowedOrigins([]string{"*"}), // You can replace "*" with specific allowed origins if needed
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
 		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
