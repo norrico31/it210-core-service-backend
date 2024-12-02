@@ -11,6 +11,7 @@ import (
 	"github.com/norrico31/it210-core-service-backend/services/priorities"
 	"github.com/norrico31/it210-core-service-backend/services/projects"
 	"github.com/norrico31/it210-core-service-backend/services/roles"
+	"github.com/norrico31/it210-core-service-backend/services/segments"
 	"github.com/norrico31/it210-core-service-backend/services/tasks"
 	"github.com/norrico31/it210-core-service-backend/services/users"
 )
@@ -61,6 +62,10 @@ func (s *APIServer) Run() {
 	proprityStore := priorities.NewStore(s.db)
 	proprityHandler := priorities.NewHandler(proprityStore)
 	priorities.RegisterRoutes(subrouterv1, proprityHandler)
+
+	segmentStore := segments.NewStore(s.db)
+	segmentHandler := segments.NewHandler(segmentStore)
+	segments.RegisterRoutes(subrouterv1, segmentHandler)
 
 	usersStore := users.NewStore(s.db)
 	usersHandler := users.NewHandler(usersStore)
