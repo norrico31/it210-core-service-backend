@@ -1,11 +1,10 @@
-// TODOS:
+// TODOS: seeders for new tables 
+// prioritites
+// segments
+// workspaces
 
-//   task 
-//   priorityId
+// CRUD 
 
-//   workspace (dragNdrop)
-//   id
-//   name
 
 // PERMISSIONS
 // roleId

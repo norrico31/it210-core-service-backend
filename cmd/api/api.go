@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/norrico31/it210-core-service-backend/config"
+	"github.com/norrico31/it210-core-service-backend/services/priorities"
 	"github.com/norrico31/it210-core-service-backend/services/projects"
 	"github.com/norrico31/it210-core-service-backend/services/roles"
 	"github.com/norrico31/it210-core-service-backend/services/tasks"
@@ -56,6 +57,10 @@ func (s *APIServer) Run() {
 	roleStore := roles.NewStore(s.db)
 	roleHandler := roles.NewHandler(roleStore)
 	roles.RegisterRoutes(subrouterv1, roleHandler)
+
+	proprityStore := priorities.NewStore(s.db)
+	proprityHandler := priorities.NewHandler(proprityStore)
+	priorities.RegisterRoutes(subrouterv1, proprityHandler)
 
 	usersStore := users.NewStore(s.db)
 	usersHandler := users.NewHandler(usersStore)

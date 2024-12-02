@@ -7,9 +7,9 @@ CREATE TABLE IF NOT EXISTS projects (
         AND progress <= 100
     ),
     url TEXT,
-    statusId: INT REFERENCES statuses(id) ON DELETE
+    statusId INT REFERENCES statuses(id) ON DELETE
     SET NULL,
-        segmentId: INT REFERENCES segment(id) ON DELETE
+        segmentId INT REFERENCES segments(id) ON DELETE
     SET NULL,
         dateStarted TIMESTAMP,
         dateDeadline TIMESTAMP,
