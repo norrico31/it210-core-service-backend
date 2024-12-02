@@ -14,6 +14,7 @@ import (
 	"github.com/norrico31/it210-core-service-backend/services/segments"
 	"github.com/norrico31/it210-core-service-backend/services/tasks"
 	"github.com/norrico31/it210-core-service-backend/services/users"
+	"github.com/norrico31/it210-core-service-backend/services/workspaces"
 )
 
 type APIServer struct {
@@ -66,6 +67,10 @@ func (s *APIServer) Run() {
 	segmentStore := segments.NewStore(s.db)
 	segmentHandler := segments.NewHandler(segmentStore)
 	segments.RegisterRoutes(subrouterv1, segmentHandler)
+
+	workspaceStore := workspaces.NewStore(s.db)
+	workspaceHandler := workspaces.NewHandler(workspaceStore)
+	workspaces.RegisterRoutes(subrouterv1, workspaceHandler)
 
 	usersStore := users.NewStore(s.db)
 	usersHandler := users.NewHandler(usersStore)

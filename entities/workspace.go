@@ -1,0 +1,30 @@
+package entities
+
+import (
+	"time"
+)
+
+type WorkspaceStore interface {
+	GetWorkspaces() ([]Workspace, error)
+	GetWorkspace(int) (*Workspace, error)
+	CreateWorkspace(WorkspacePayload) (*Workspace, error)
+	UpdateWorkspace(WorkspacePayload) error
+	DeleteWorkspace(int) error
+	RestoreWorkspace(int) error
+}
+
+type Workspace struct {
+	ID          int        `json:"id"`
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	UpdatedAt   time.Time  `json:"updatedAt"`
+	DeletedAt   *time.Time `json:"deletedAt,omitempty"`
+	DeletedBy   *time.Time `json:"deletedBy,omitempty"`
+}
+
+type WorkspacePayload struct {
+	ID          int    `json:"id"`
+	Name        string `validate:"required,min=3,max=50"`
+	Description string `json:"description"`
+}
