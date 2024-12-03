@@ -141,8 +141,12 @@ func (h *Handler) handleProjectUpdate(w http.ResponseWriter, r *http.Request) {
 		existProj.Url = payload.Url
 	}
 
-	if payload.StatusID != 0 {
-		existProj.StatusID = payload.StatusID
+	if payload.StatusID != nil {
+		existProj.StatusID = *payload.StatusID
+	}
+
+	if payload.SegmentID != nil {
+		existProj.SegmentID = *payload.SegmentID
 	}
 
 	var userIDs []int
@@ -153,6 +157,9 @@ func (h *Handler) handleProjectUpdate(w http.ResponseWriter, r *http.Request) {
 			userIDs = append(userIDs, user.ID)
 		}
 	}
+
+	payload.StatusID = &existProj.StatusID
+	payload.SegmentID = &existProj.SegmentID
 
 	err = h.store.ProjectUpdate(projectId, payload, userIDs)
 	if err != nil {

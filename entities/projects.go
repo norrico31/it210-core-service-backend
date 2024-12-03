@@ -48,8 +48,8 @@ type ProjectUpdatePayload struct {
 	Description  string   `json:"description"`
 	Progress     *float64 `json:"progress"`
 	Url          *string  `json:"url"`
-	StatusID     int      `json:"statusId"`
-	SegmentID    int      `json:"segmentId"`
+	StatusID     *int     `json:"statusId"`
+	SegmentID    *int     `json:"segmentId"`
 	DateStarted  string   `json:"dateStarted"`
 	DateDeadline string   `json:"dateDeadline"`
 	UserIDs      *[]int   `json:"userIds"`

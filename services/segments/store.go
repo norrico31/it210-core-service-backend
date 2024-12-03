@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/norrico31/it210-core-service-backend/entities"
 )
@@ -17,7 +18,6 @@ func NewStore(db *sql.DB) *Store {
 }
 
 func (s *Store) GetSegments() ([]entities.Segment, error) {
-	// Query segments and associated projects, including segments without projects
 	rows, err := s.db.Query(`
 		SELECT 
 			seg.id AS segment_id, 
@@ -25,6 +25,7 @@ func (s *Store) GetSegments() ([]entities.Segment, error) {
 			seg.description AS segment_description,
 			seg.createdAt AS segment_createdAt,
 			seg.updatedAt AS segment_updatedAt,
+			seg.deletedAt AS segment_deletedAt,
 			p.id AS project_id, 
 			p.name AS project_name, 
 			p.description AS project_description,
@@ -33,10 +34,12 @@ func (s *Store) GetSegments() ([]entities.Segment, error) {
 			p.dateStarted AS project_dateStarted, 
 			p.dateDeadline AS project_dateDeadline, 
 			p.createdAt AS project_createdAt,
-			p.updatedAt AS project_updatedAt
+			p.updatedAt AS project_updatedAt,
+			p.deletedAt AS project_deletedAt
 		FROM segments seg
 		LEFT JOIN segments_projects sp ON seg.id = sp.segmentId
 		LEFT JOIN projects p ON sp.projectId = p.id
+		WHERE seg.deletedAt IS NULL
 		ORDER BY seg.id, p.createdAt DESC
 	`)
 	if err != nil {
@@ -44,46 +47,56 @@ func (s *Store) GetSegments() ([]entities.Segment, error) {
 	}
 	defer rows.Close()
 
-	// Create a map to associate segment ID with the segment itself
 	segments := make(map[int]*entities.Segment)
 
-	// Process each row
 	for rows.Next() {
 		var segment entities.Segment
 		var project entities.Project
 
-		// Use sql.NullInt64 for project.ID to handle NULL values
-		var projectID sql.NullInt64
+		var projectID *int
+		var projectName, projectDescription *string
+		var projectCreatedAt, projectUpdatedAt, projectDeletedAt *time.Time
 
 		err := rows.Scan(
-			&segment.ID, &segment.Name, &segment.Description, &segment.CreatedAt, &segment.UpdatedAt,
-			&projectID, &project.Name, &project.Description, &project.Progress, &project.Url,
-			&project.DateStarted, &project.DateDeadline, &project.CreatedAt, &project.UpdatedAt,
+			&segment.ID, &segment.Name, &segment.Description, &segment.CreatedAt, &segment.UpdatedAt, &segment.DeletedAt,
+			&projectID, &projectName, &projectDescription, &project.Progress, &project.Url,
+			&project.DateStarted, &project.DateDeadline, &projectCreatedAt, &projectUpdatedAt, &projectDeletedAt,
 		)
 		if err != nil {
 			log.Printf("Failed to scan row: %v", err)
 			continue
 		}
 
-		// Check if the segment is already in the map
 		if _, exists := segments[segment.ID]; !exists {
 			segments[segment.ID] = &segment
 		}
 
-		// Only add the project if the project ID is not NULL
-		if projectID.Valid {
-			project.ID = int(projectID.Int64) // Convert int64 to int
+		if projectID != nil {
+			project.ID = *projectID
+			if projectName != nil {
+				project.Name = *projectName
+			}
+			if projectDescription != nil {
+				project.Description = *projectDescription
+			}
+			if projectCreatedAt != nil {
+				project.CreatedAt = *projectCreatedAt
+			}
+			if projectUpdatedAt != nil {
+				project.UpdatedAt = *projectUpdatedAt
+			}
+			if projectDeletedAt != nil {
+				project.DeletedAt = projectDeletedAt
+			}
 			segments[segment.ID].Projects = append(segments[segment.ID].Projects, project)
 		}
 	}
 
-	// Convert the map back to a slice
 	var result []entities.Segment
 	for _, segment := range segments {
 		result = append(result, *segment)
 	}
 
-	// Check for any row iteration errors
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("failed to iterate over rows: %v", err)
 	}
@@ -92,7 +105,6 @@ func (s *Store) GetSegments() ([]entities.Segment, error) {
 }
 
 func (s *Store) GetSegment(id int) (*entities.Segment, error) {
-	// Query segment and its associated projects
 	rows, err := s.db.Query(`
 		SELECT 
 			seg.id AS segment_id, 
@@ -100,6 +112,7 @@ func (s *Store) GetSegment(id int) (*entities.Segment, error) {
 			seg.description AS segment_description,
 			seg.createdAt AS segment_createdAt,
 			seg.updatedAt AS segment_updatedAt,
+			seg.deletedAt AS segment_deletedAt,
 			p.id AS project_id, 
 			p.name AS project_name, 
 			p.description AS project_description,
@@ -120,15 +133,13 @@ func (s *Store) GetSegment(id int) (*entities.Segment, error) {
 	}
 	defer rows.Close()
 
-	// Create a map to associate segment ID with the segment itself
 	segment := &entities.Segment{}
-	// Process each row
 	for rows.Next() {
 		var project entities.Project
 		var projectID sql.NullInt64
 
 		err := rows.Scan(
-			&segment.ID, &segment.Name, &segment.Description, &segment.CreatedAt, &segment.UpdatedAt,
+			&segment.ID, &segment.Name, &segment.Description, &segment.CreatedAt, &segment.UpdatedAt, &segment.DeletedAt,
 			&projectID, &project.Name, &project.Description, &project.Progress, &project.Url,
 			&project.DateStarted, &project.DateDeadline, &project.CreatedAt, &project.UpdatedAt,
 		)
@@ -137,14 +148,12 @@ func (s *Store) GetSegment(id int) (*entities.Segment, error) {
 			continue
 		}
 
-		// Only add the project if the project ID is not NULL
 		if projectID.Valid {
 			project.ID = int(projectID.Int64) // Convert int64 to int
 			segment.Projects = append(segment.Projects, project)
 		}
 	}
 
-	// Check for any row iteration errors
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("failed to iterate over rows: %v", err)
 	}
@@ -170,7 +179,6 @@ func (s *Store) CreateSegment(payload entities.SegmentPayload) (*entities.Segmen
 		payload.Description,
 	).Scan(&segmentID)
 	if err != nil {
-		// Rollback the transaction if the insert fails
 		if rbErr := tx.Rollback(); rbErr != nil {
 			return nil, fmt.Errorf("insert error: %v, rollback error: %v", err, rbErr)
 		}
@@ -194,12 +202,10 @@ func (s *Store) CreateSegment(payload entities.SegmentPayload) (*entities.Segmen
 		}
 	}
 
-	// Step 3: Commit the transaction if everything went well
 	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
 
-	// Return the created segment with the assigned ID
 	return &entities.Segment{
 		ID:          segmentID,
 		Name:        payload.Name,
@@ -214,24 +220,19 @@ func (s *Store) UpdateSegment(payload entities.SegmentPayload) error {
 		return err
 	}
 
-	// Step 1: Update the segment details in the 'segments' table
 	_, err = tx.Exec("UPDATE segments SET name = $1, description = $2, updatedAt = CURRENT_TIMESTAMP WHERE id = $3", payload.Name, payload.Description, payload.ID)
 	if err != nil {
-		// Rollback transaction if update fails
 		if rbErr := tx.Rollback(); rbErr != nil {
 			return fmt.Errorf("update error: %v, rollback error: %v", err, rbErr)
 		}
 		return err
 	}
 
-	// Step 3: Insert the new associations (if any)
 	if len(*payload.ProjectIDs) > 0 {
-		// Step 2: Delete existing associations from 'segments_projects'
 		_, err = tx.Exec(`
 			DELETE FROM segments_projects WHERE segmentId = $1
 		`, payload.ID)
 		if err != nil {
-			// Rollback transaction if deleting associations fails
 			if rbErr := tx.Rollback(); rbErr != nil {
 				return fmt.Errorf("delete error: %v, rollback error: %v", err, rbErr)
 			}
@@ -244,7 +245,6 @@ func (s *Store) UpdateSegment(payload entities.SegmentPayload) error {
 				VALUES ($1, $2)
 			`, payload.ID, projectID)
 			if err != nil {
-				// Rollback transaction if inserting new associations fails
 				if rbErr := tx.Rollback(); rbErr != nil {
 					return fmt.Errorf("insert association error: %v, rollback error: %v", err, rbErr)
 				}
@@ -253,7 +253,6 @@ func (s *Store) UpdateSegment(payload entities.SegmentPayload) error {
 		}
 	}
 
-	// Step 4: Commit the transaction if everything went well
 	if err = tx.Commit(); err != nil {
 		return err
 	}
@@ -267,20 +266,34 @@ func (s *Store) DeleteSegment(id int) error {
 		return err
 	}
 
+	// Step 1: Mark the segment as deleted
 	_, err = tx.Exec("UPDATE segments SET deletedAt = CURRENT_TIMESTAMP WHERE id = $1", id)
-
 	if err != nil {
+		// Rollback if updating the segment fails
 		if rbErr := tx.Rollback(); rbErr != nil {
-			return fmt.Errorf("delete error: %v, rollback error: %v", err, rbErr)
+			return fmt.Errorf("delete segment error: %v, rollback error: %v", err, rbErr)
 		}
-		return err
+		return fmt.Errorf("failed to mark segment as deleted: %v", err)
 	}
 
+	// Step 2: Mark associated project relationships as deleted in 'segments_projects'
+	_, err = tx.Exec(`
+		UPDATE segments_projects SET deletedAt = CURRENT_TIMESTAMP WHERE segmentId = $1
+	`, id)
+	if err != nil {
+		// Rollback if updating the associations fails
+		if rbErr := tx.Rollback(); rbErr != nil {
+			return fmt.Errorf("delete associations error: %v, rollback error: %v", err, rbErr)
+		}
+		return fmt.Errorf("failed to mark segment-project associations as deleted: %v", err)
+	}
+
+	// Step 3: Commit the transaction if all went well
 	if err = tx.Commit(); err != nil {
-		return err
+		return fmt.Errorf("commit error: %v", err)
 	}
 
-	return err
+	return nil
 }
 
 func (s *Store) RestoreSegment(id int) error {
@@ -298,7 +311,6 @@ func (s *Store) RestoreSegment(id int) error {
 		return err
 	}
 
-	// Commit the transaction if all went well
 	if err = tx.Commit(); err != nil {
 		return err
 	}
