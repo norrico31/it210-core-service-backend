@@ -17,12 +17,11 @@ type Segment struct {
 	ID          int        `json:"id"`
 	Name        string     `json:"name"`
 	Description string     `json:"description"`
-	ProjectID   *int       `json:"projectId"`
-	Projects    []Project  `json:"projects"`
 	CreatedAt   time.Time  `json:"createdAt"`
 	UpdatedAt   time.Time  `json:"updatedAt"`
 	DeletedAt   *time.Time `json:"deletedAt,omitempty"`
 	DeletedBy   *time.Time `json:"deletedBy,omitempty"`
+	Projects    []Project  `json:"projects"`
 }
 
 type SegmentPayload struct {

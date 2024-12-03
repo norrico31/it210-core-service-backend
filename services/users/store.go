@@ -363,16 +363,16 @@ func (s *Store) GetUserById(id int) (*entities.User, error) {
 			project.UpdatedAt = *projectUpdatedAt
 
 			// Add segment to project
-			if segmentID != nil {
-				project.SegmentID = *segmentID
-				project.Segment = entities.Segment{
-					ID:          *segmentID,
-					Name:        *segmentName,
-					Description: *segmentDescription,
-					CreatedAt:   *segmentCreatedAt,
-					UpdatedAt:   *segmentUpdatedAt,
-				}
-			}
+			// if segmentID != nil {
+			// 	project.SegmentID = *segmentID
+			// 	project.Segment = entities.Segment{
+			// 		ID:          *segmentID,
+			// 		Name:        *segmentName,
+			// 		Description: *segmentDescription,
+			// 		CreatedAt:   *segmentCreatedAt,
+			// 		UpdatedAt:   *segmentUpdatedAt,
+			// 	}
+			// }
 
 			// Append project to user
 			userMap[userID].Projects = append(userMap[userID].Projects, project)

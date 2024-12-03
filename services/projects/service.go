@@ -89,7 +89,6 @@ func (h *Handler) handleProjectCreate(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJSON(w, http.StatusCreated, proj)
 }
 
-// TODO
 func (h *Handler) handleProjectUpdate(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	str, ok := vars["projectId"]
@@ -142,13 +141,10 @@ func (h *Handler) handleProjectUpdate(w http.ResponseWriter, r *http.Request) {
 		existProj.Url = payload.Url
 	}
 
-	// Ensure non-nullable fields are not nullified
 	if payload.StatusID != 0 {
 		existProj.StatusID = payload.StatusID
 	}
-	if payload.SegmentID != 0 {
-		existProj.SegmentID = payload.SegmentID
-	}
+
 	var userIDs []int
 	if payload.UserIDs != nil {
 		userIDs = *payload.UserIDs

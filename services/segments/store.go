@@ -18,98 +18,81 @@ func NewStore(db *sql.DB) *Store {
 
 // TODO GET WITH ASSOCIATE
 func (s *Store) GetSegments() ([]entities.Segment, error) {
-	// First, query to get all segments
-	segmentRows, err := s.db.Query(`
+	// Query segments and associated projects, including segments without projects
+	rows, err := s.db.Query(`
 		SELECT 
-			seg.id, seg.name, seg.description, seg.createdAt, seg.updatedAt
+			seg.id AS segment_id, 
+			seg.name AS segment_name, 
+			seg.description AS segment_description,
+			seg.createdAt AS segment_createdAt,
+			seg.updatedAt AS segment_updatedAt,
+			p.id AS project_id, 
+			p.name AS project_name, 
+			p.description AS project_description,
+			p.progress AS project_progress, 
+			p.url AS project_url, 
+			p.dateStarted AS project_dateStarted, 
+			p.dateDeadline AS project_dateDeadline, 
+			p.createdAt AS project_createdAt,
+			p.updatedAt AS project_updatedAt
 		FROM segments seg
-		ORDER BY seg.createdAt DESC
+		LEFT JOIN segments_projects sp ON seg.id = sp.segmentId
+		LEFT JOIN projects p ON sp.projectId = p.id
+		ORDER BY seg.id, p.createdAt DESC
 	`)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query segments: %v", err)
+		return nil, fmt.Errorf("failed to query segments and projects: %v", err)
 	}
-	defer segmentRows.Close()
+	defer rows.Close()
 
-	segments := []entities.Segment{}
-	segmentMap := make(map[int]*entities.Segment) // Map to associate segments with their projects
+	// Create a map to associate segment ID with the segment itself
+	segments := make(map[int]*entities.Segment)
 
-	for segmentRows.Next() {
+	// Process each row
+	for rows.Next() {
 		var segment entities.Segment
-		err := segmentRows.Scan(
-			&segment.ID,
-			&segment.Name,
-			&segment.Description,
-			&segment.CreatedAt,
-			&segment.UpdatedAt,
-		)
-		if err != nil {
-			log.Printf("Failed to scan segment row: %v", err)
-			continue
-		}
-
-		// Initialize the segment in the map
-		segmentMap[segment.ID] = &segment
-		segments = append(segments, segment)
-	}
-
-	// Check for any row iteration errors for segments
-	if err := segmentRows.Err(); err != nil {
-		return nil, fmt.Errorf("failed to iterate over segment rows: %v", err)
-	}
-
-	// Next, query to get projects associated with the segments
-	projectRows, err := s.db.Query(`
-		SELECT 
-			p.id as project_id, p.name as project_name, p.description as project_description,
-			p.progress as project_progress, p.url as project_url, 
-			p.dateStarted as project_dateStarted, p.dateDeadline as project_dateDeadline,
-			p.createdAt as project_createdAt, p.updatedAt as project_updatedAt, 
-			p.segmentId as project_segmentId
-		FROM projects p
-		ORDER BY p.createdAt DESC
-	`)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query projects: %v", err)
-	}
-	defer projectRows.Close()
-
-	// Associate projects with their respective segments
-	for projectRows.Next() {
 		var project entities.Project
-		var segmentId int
 
-		err := projectRows.Scan(
-			&project.ID,
-			&project.Name,
-			&project.Description,
-			&project.Progress,
-			&project.Url,
-			&project.DateStarted,
-			&project.DateDeadline,
-			&project.CreatedAt,
-			&project.UpdatedAt,
-			&segmentId,
+		// Use sql.NullInt64 for project.ID to handle NULL values
+		var projectID sql.NullInt64
+
+		err := rows.Scan(
+			&segment.ID, &segment.Name, &segment.Description, &segment.CreatedAt, &segment.UpdatedAt,
+			&projectID, &project.Name, &project.Description, &project.Progress, &project.Url,
+			&project.DateStarted, &project.DateDeadline, &project.CreatedAt, &project.UpdatedAt,
 		)
 		if err != nil {
-			log.Printf("Failed to scan project row: %v", err)
+			log.Printf("Failed to scan row: %v", err)
 			continue
 		}
 
-		// Check if the project is associated with the current segment (only append if IDs match)
-		if segment, exists := segmentMap[segmentId]; exists && segment.ID == segmentId {
-			// If the segment exists and IDs match, append the project to the segment's Projects slice
-			segment.Projects = append(segment.Projects, project)
+		// Check if the segment is already in the map
+		if _, exists := segments[segment.ID]; !exists {
+			segments[segment.ID] = &segment
+		}
+
+		// Only add the project if the project ID is not NULL
+		if projectID.Valid {
+			project.ID = int(projectID.Int64) // Convert int64 to int
+			segments[segment.ID].Projects = append(segments[segment.ID].Projects, project)
 		}
 	}
 
-	// Check for any row iteration errors for projects
-	if err := projectRows.Err(); err != nil {
-		return nil, fmt.Errorf("failed to iterate over project rows: %v", err)
+	// Convert the map back to a slice
+	var result []entities.Segment
+	for _, segment := range segments {
+		result = append(result, *segment)
 	}
 
-	return segments, nil
+	// Check for any row iteration errors
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate over rows: %v", err)
+	}
+
+	return result, nil
 }
 
+// TODO: THIS MOTHER FUCKER
 func (s *Store) GetSegment(id int) (*entities.Segment, error) {
 	segment := entities.Segment{}
 	err := s.db.QueryRow("SELECT id, name, description, createdAt, updatedAt FROM segments WHERE deletedAt IS NULL AND id = $1", id).Scan(

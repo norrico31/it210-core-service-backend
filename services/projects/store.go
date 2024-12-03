@@ -17,7 +17,9 @@ func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
 }
 
+// why index 1 has duplicated users? (EDIT projectId 1 for user ids)
 func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
+	print("hala?")
 	query := `
 		SELECT
 			p.id AS project_id,
@@ -25,7 +27,6 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 			p.description AS project_description,
 			p.url AS project_url,
 			p.progress AS project_progress,
-			p.segmentId AS project_segment_id,
 			p.statusId AS project_status_id,
 			p.dateStarted AS project_date_started,
 			p.dateDeadline AS project_date_deadline,
@@ -59,13 +60,18 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 		LEFT JOIN
 			users_projects up ON up.deletedAt IS NULL AND p.id = up.project_id
 		LEFT JOIN
+			segments_projects sp ON sp.projectId = p.id
+		LEFT JOIN
+			segments seg ON seg.id = sp.segmentId
+		LEFT JOIN
 			users u ON up.deletedAt IS NULL AND up.user_id = u.id
 		LEFT JOIN
 			statuses stat ON stat.id = p.statusId
-		LEFT JOIN
-			segments seg ON seg.id = p.segmentId
 	`
 
+	// seg.id segment_id,
+	// seg.name segment_name,
+	// seg.description segment_description,
 	rows, err := s.db.Query(query)
 	if err != nil {
 		return nil, err
@@ -78,18 +84,18 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 	for rows.Next() {
 		var project entities.Project
 		var dateStarted, dateDeadline *time.Time
-		var projectId, projectSegmentId, projectStatusId *int
+		var projectId, projectStatusId *int
 
-		var statusID, segmentId *int
-		var statusName, statusDescription, segmentName, segmentDescription *string
+		var statusID *int
+		var statusName, statusDescription *string
 
 		user := entities.User{}
-		var userFirstName, userLastName, userEmail *string
-		var userID, userAge, userDeletedBy, userRoleId *int
+		var userFirstName, userLastName, userEmail, segmentName, segmentDescription *string
+		var userID, userAge, userDeletedBy, userRoleId, segmentId *int
 		var userLastActiveAt, userCreatedAt, userUpdatedAt, userDeletedAt *time.Time
 
 		err := rows.Scan(
-			&projectId, &project.Name, &project.Description, &project.Url, &project.Progress, &projectSegmentId, &projectStatusId, &dateStarted, &dateDeadline, &project.CreatedAt, &project.UpdatedAt, &project.DeletedAt, &project.DeletedBy,
+			&projectId, &project.Name, &project.Description, &project.Url, &project.Progress, &projectStatusId, &dateStarted, &dateDeadline, &project.CreatedAt, &project.UpdatedAt, &project.DeletedAt, &project.DeletedBy,
 			&statusID, &statusName, &statusDescription,
 			&segmentId, &segmentName, &segmentDescription,
 			&userID, &userFirstName, &userLastName, &userEmail, &userAge, &userRoleId, &userLastActiveAt, &userCreatedAt, &userUpdatedAt, &userDeletedAt, &userDeletedBy,
@@ -150,7 +156,7 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 			project.Status = status
 		}
 
-		if projectSegmentId != nil {
+		if segmentId != nil {
 			project.SegmentID = *segmentId
 			segment := entities.Segment{
 				ID:          *segmentId,
@@ -188,7 +194,6 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 			p.description AS project_description,
 			p.url AS project_url,
 			p.progress AS project_progress,
-			p.segmentId project_segment_id,
 			p.statusId project_status_id,
 			p.dateStarted AS project_date_started,
 			p.dateDeadline AS project_date_deadline,
@@ -222,11 +227,13 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 		LEFT JOIN
 			users_projects up ON p.id = up.project_id
 		LEFT JOIN
+			segments_projects sp ON sp.projectId = p.id
+		LEFT JOIN
+			segments seg ON seg.id = sp.segmentId
+		LEFT JOIN
 			users u ON up.user_id = u.id
 		LEFT JOIN
 			statuses stat ON stat.id = p.statusId
-		LEFT JOIN
-			segments seg ON seg.id = p.segmentId
 		WHERE 
 			p.id = $1 AND p.deletedAt IS NULL
 	`
@@ -243,7 +250,7 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 	for rows.Next() {
 		var dateStarted, dateDeadline *time.Time
 		user := entities.User{}
-		var userID, userAge, userDeletedBy, projectSegmentId, projectStatusId, userRoleId *int
+		var userID, userAge, userDeletedBy, projectStatusId, userRoleId *int
 		var userFirstName, userLastName, userEmail *string
 		var userLastActiveAt, userCreatedAt, userUpdatedAt, userDeletedAt *time.Time
 
@@ -252,7 +259,7 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 		var segmentName, segmentDescription *string
 
 		err := rows.Scan(
-			&project.ID, &project.Name, &project.Description, &project.Url, &project.Progress, &projectSegmentId, &projectStatusId, &dateStarted, &dateDeadline, &project.CreatedAt, &project.UpdatedAt, &project.DeletedAt, &project.DeletedBy,
+			&project.ID, &project.Name, &project.Description, &project.Url, &project.Progress, &projectStatusId, &dateStarted, &dateDeadline, &project.CreatedAt, &project.UpdatedAt, &project.DeletedAt, &project.DeletedBy,
 			&statusID, &statusName, &statusDescription, &segmentId, &segmentName, &segmentDescription,
 			&userID, &userFirstName, &userLastName, &userEmail, &userAge, &userRoleId, &userLastActiveAt, &userCreatedAt, &userUpdatedAt, &userDeletedAt, &userDeletedBy,
 		)
@@ -276,10 +283,10 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 			}
 		}
 
-		if projectSegmentId != nil {
+		if segmentId != nil {
 			project.SegmentID = *segmentId
 			project.Segment = entities.Segment{
-				ID:          *projectSegmentId,
+				ID:          *segmentId,
 				Name:        *segmentName,
 				Description: *segmentDescription,
 			}
@@ -355,7 +362,7 @@ func (s *Store) ProjectCreate(payload entities.ProjectCreatePayload) (map[string
 	}
 
 	proj := entities.Project{}
-	err = tx.QueryRow("INSERT INTO projects (name, description, progress, url, statusId, segmentId, dateStarted, dateDeadline, createdAt, updatedAt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id, name, description, progress, url, statusId, segmentId, dateStarted, dateDeadline, createdAt, updatedAt",
+	err = tx.QueryRow("INSERT INTO projects (name, description, progress, url, statusId,  dateStarted, dateDeadline, createdAt, updatedAt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, name, description, progress, url, statusId, dateStarted, dateDeadline, createdAt, updatedAt",
 		payload.Name,
 		payload.Description,
 		progress,
@@ -373,7 +380,6 @@ func (s *Store) ProjectCreate(payload entities.ProjectCreatePayload) (map[string
 		&proj.Progress,
 		&proj.Url,
 		&proj.StatusID,
-		&proj.SegmentID,
 		&proj.DateStarted,
 		&proj.DateDeadline,
 		&proj.CreatedAt,
@@ -409,11 +415,12 @@ func (s *Store) ProjectUpdate(projId int, payload entities.ProjectUpdatePayload,
 		dateDeadline = &payload.DateDeadline
 	}
 
+	// Update project details
 	updateQuery := `
 		UPDATE projects
-		SET name = $1, description = $2, progress = $3, url = $4, dateStarted = $5, dateDeadline = $6, statusId = $7, segmentId = $8, updatedAt = $9
-		WHERE id = $10
-		RETURNING id, name, description, progress, url, dateStarted, dateDeadline, statusId, segmentId, createdAt, updatedAt`
+		SET name = $1, description = $2, progress = $3, url = $4, dateStarted = $5, dateDeadline = $6, statusId = $7, updatedAt = $8
+		WHERE id = $9
+		RETURNING id, name, description, progress, url, dateStarted, dateDeadline, statusId, createdAt, updatedAt`
 	_, err = tx.Exec(updateQuery,
 		payload.Name,
 		payload.Description,
@@ -422,15 +429,45 @@ func (s *Store) ProjectUpdate(projId int, payload entities.ProjectUpdatePayload,
 		dateStarted,
 		dateDeadline,
 		payload.StatusID,
-		payload.SegmentID,
 		time.Now(),
 		projId,
 	)
 
+	// Check if error occurred during project update
 	if err != nil {
 		tx.Rollback()
 		return fmt.Errorf("update error: %v", err)
 	}
+
+	// Delete old segment associations
+	deleteQuery := `DELETE FROM segments_projects WHERE projectId = $1 RETURNING projectId, segmentId`
+	rows, err := tx.Query(deleteQuery, projId)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to delete old segment associations: %v", err)
+	}
+	defer rows.Close()
+
+	// Debug: print the deleted rows
+	for rows.Next() {
+		var projectId, segmentId int
+		if err := rows.Scan(&projectId, &segmentId); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("failed to read deleted segment association: %v", err)
+		}
+		fmt.Printf("Deleted segment association: projectId=%d, segmentId=%d\n", projectId, segmentId)
+	}
+
+	_, err = tx.Exec(`
+			INSERT INTO segments_projects (segmentId, projectId, deletedAt, deletedBy)
+			VALUES ($1, $2, NULL, NULL)
+		`, payload.SegmentID, projId)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to associate segment with project: %v", err)
+	}
+
+	print(payload.SegmentID, projId)
 
 	// Delete old user-project associations
 	_, err = tx.Exec(`
@@ -558,7 +595,6 @@ func buildProjectResponse(proj entities.Project) map[string]interface{} {
 		"description":  proj.Description,
 		"progress":     proj.Progress,
 		"statusId":     proj.StatusID,
-		"segmentId":    proj.SegmentID,
 		"url":          proj.Url,
 		"dateStarted":  formatDate(proj.DateStarted),
 		"dateDeadline": formatDate(proj.DateDeadline),

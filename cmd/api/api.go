@@ -37,7 +37,6 @@ func logRequest(next http.Handler) http.Handler {
 	})
 }
 
-// TODO: STILL NOT WORKING IN CONTAINER (PORT VARIES EVERYTIME)
 func (s *APIServer) enforceGatewayOrigin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Your existing logic for enforcing gateway origin

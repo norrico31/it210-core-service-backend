@@ -10,6 +10,7 @@ import (
 )
 
 func SeedProjects(db *sql.DB) error {
+	// Fetch statuses
 	statuses := make(map[string]int)
 	statusRows, err := db.Query(`
 		SELECT
@@ -36,6 +37,7 @@ func SeedProjects(db *sql.DB) error {
 	active := statuses["Active"]
 	notStarted := statuses["Not Started"]
 
+	// Fetch segments
 	segments := make(map[string]int)
 	segmentRows, err := db.Query(`
 		SELECT
@@ -113,10 +115,11 @@ func SeedProjects(db *sql.DB) error {
 		go func(project entities.Project) {
 			defer wg.Done()
 
+			// Insert project into the projects table
 			_, err := db.Exec(`
-				INSERT INTO projects (name, description, progress, statusId, segmentId, createdAt, updatedAt)
-				VALUES ($1, $2, $3, $4, $5, $6, $7)
-			`, project.Name, project.Description, project.Progress, project.StatusID, project.SegmentID, time.Now(), time.Now())
+				INSERT INTO projects (name, description, progress, statusId, createdAt, updatedAt)
+				VALUES ($1, $2, $3, $4, $5, $6)
+			`, project.Name, project.Description, project.Progress, project.StatusID, time.Now(), time.Now())
 
 			if err != nil {
 				log.Printf("Failed to insert project %s: %v\n", project.Name, err)
@@ -124,6 +127,7 @@ func SeedProjects(db *sql.DB) error {
 			}
 			log.Printf("Successfully inserted project %s\n", project.Name)
 
+			// Get project ID
 			var projectId int
 			err = db.QueryRow(`SELECT id FROM projects WHERE name = $1`, project.Name).Scan(&projectId)
 			if err != nil {
@@ -131,6 +135,18 @@ func SeedProjects(db *sql.DB) error {
 				return
 			}
 
+			// Insert into segments_projects table
+			_, err = db.Exec(`
+				INSERT INTO segments_projects (segmentId, projectId, deletedAt, deletedBy)
+				VALUES ($1, $2, NULL, NULL)
+			`, project.SegmentID, projectId)
+			if err != nil {
+				log.Printf("Failed to insert into segments_projects for project %d and segment %d: %v\n", projectId, project.SegmentID, err)
+				return
+			}
+			log.Printf("Successfully associated project %d with segment %d\n", projectId, project.SegmentID)
+
+			// Fetch users and associate them with the project (similar to original code)
 			users := []int{}
 			rows, err := db.Query(`SELECT id FROM users`)
 			if err != nil {
@@ -153,7 +169,7 @@ func SeedProjects(db *sql.DB) error {
 				return
 			}
 
-			// Insert project-user associations
+			// Insert project-user associations (existing code)
 			for _, userId := range users {
 				_, err = db.Exec(`
 				INSERT INTO users_projects (project_id, user_id) 

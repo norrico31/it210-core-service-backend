@@ -9,8 +9,8 @@ CREATE TABLE IF NOT EXISTS projects (
     url TEXT,
     statusId INT REFERENCES statuses(id) ON DELETE
     SET NULL,
-        segmentId INT REFERENCES segments(id) ON DELETE
-    SET NULL,
+        --     segmentId INT REFERENCES segments(id) ON DELETE
+        -- SET NULL,
         dateStarted TIMESTAMP,
         dateDeadline TIMESTAMP,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
