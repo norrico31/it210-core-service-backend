@@ -645,7 +645,7 @@ func (s *Store) ProjectDelete(id int) (*entities.Project, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	println("projectId: ", id)
 	proj := entities.Project{}
 	err = tx.QueryRow("UPDATE projects SET deletedAt = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id, name, description, createdAt, updatedAt, deletedAt", id).Scan(
 		&proj.ID,

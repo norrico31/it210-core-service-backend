@@ -146,13 +146,13 @@ func (h *Handler) handleProjectDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existProj, err := h.store.GetProject(projectId)
-	if err != nil {
-		utils.WriteError(w, http.StatusNotFound, err)
-		return
-	}
+	// existProj, err := h.store.GetProject(projectId)
+	// if err != nil {
+	// 	utils.WriteError(w, http.StatusNotFound, err)
+	// 	return
+	// }
 
-	project, err := h.store.ProjectDelete(existProj.ID)
+	project, err := h.store.ProjectDelete(projectId)
 
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
