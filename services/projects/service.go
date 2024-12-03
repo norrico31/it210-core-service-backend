@@ -116,6 +116,9 @@ func (h *Handler) handleProjectUpdate(w http.ResponseWriter, r *http.Request) {
 		Name:         payload.Name,
 		Description:  payload.Description,
 		Progress:     payload.Progress,
+		Url:          payload.Url,
+		SegmentID:    payload.SegmentID,
+		StatusID:     payload.StatusID,
 		DateStarted:  payload.DateStarted,
 		DateDeadline: payload.DateDeadline,
 	}

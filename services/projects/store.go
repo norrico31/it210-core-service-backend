@@ -547,7 +547,7 @@ func (s *Store) ProjectUpdate(payload entities.ProjectUpdatePayload) (map[string
 
 	// Fetch the existing project
 	query := `
-		SELECT id, name, description, progress, dateStarted, dateDeadline, createdAt, updatedAt
+		SELECT id, name, description, progress, url, dateStarted, dateDeadline, statusId, segmentId, createdAt, updatedAt
 		FROM projects
 		WHERE id = $1`
 	rows, err := s.db.Query(query, payload.ID)
@@ -559,8 +559,9 @@ func (s *Store) ProjectUpdate(payload entities.ProjectUpdatePayload) (map[string
 	existProj := entities.Project{}
 	if rows.Next() {
 		err := rows.Scan(
-			&existProj.ID, &existProj.Name, &existProj.Description, &existProj.Progress,
-			&existProj.DateStarted, &existProj.DateDeadline, &existProj.CreatedAt, &existProj.UpdatedAt,
+			&existProj.ID, &existProj.Name, &existProj.Description, &existProj.Progress, &existProj.Url,
+			&existProj.DateStarted, &existProj.DateDeadline, &existProj.StatusID, &existProj.SegmentID,
+			&existProj.CreatedAt, &existProj.UpdatedAt,
 		)
 		if err != nil {
 			return nil, err
@@ -592,22 +593,38 @@ func (s *Store) ProjectUpdate(payload entities.ProjectUpdatePayload) (map[string
 		existProj.DateDeadline = &dateDeadline
 	}
 
+	if payload.Url != nil {
+		existProj.Url = payload.Url
+	}
+
+	// Ensure non-nullable fields are not nullified
+	if payload.StatusID != 0 {
+		existProj.StatusID = payload.StatusID
+	}
+	if payload.SegmentID != 0 {
+		existProj.SegmentID = payload.SegmentID
+	}
+
 	updateQuery := `
 		UPDATE projects
-		SET name = $1, description = $2, progress = $3, dateStarted = $4, dateDeadline = $5, updatedAt = CURRENT_TIMESTAMP
-		WHERE id = $6
-		RETURNING id, name, description, progress, dateStarted, dateDeadline, createdAt, updatedAt`
+		SET name = $1, description = $2, progress = $3, url = $4, dateStarted = $5, dateDeadline = $6, statusId = $7, segmentId = $8, updatedAt = CURRENT_TIMESTAMP
+		WHERE id = $9
+		RETURNING id, name, description, progress, url, dateStarted, dateDeadline, statusId, segmentId, createdAt, updatedAt`
 	proj := entities.Project{}
 	err = tx.QueryRow(updateQuery,
 		existProj.Name,
 		existProj.Description,
 		existProj.Progress,
+		existProj.Url,
 		existProj.DateStarted,
 		existProj.DateDeadline,
+		existProj.StatusID,
+		existProj.SegmentID,
 		existProj.ID,
 	).Scan(
-		&proj.ID, &proj.Name, &proj.Description, &proj.Progress,
-		&proj.DateStarted, &proj.DateDeadline, &proj.CreatedAt, &proj.UpdatedAt,
+		&proj.ID, &proj.Name, &proj.Description, &proj.Progress, &proj.Url,
+		&proj.DateStarted, &proj.DateDeadline, &proj.StatusID, &proj.SegmentID,
+		&proj.CreatedAt, &proj.UpdatedAt,
 	)
 
 	if err != nil {
