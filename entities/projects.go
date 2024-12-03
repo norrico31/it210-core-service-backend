@@ -36,7 +36,7 @@ type ProjectCreatePayload struct {
 	Progress     *float64 `json:"progress"`
 	Url          *string  `json:"url"`
 	StatusID     int      `json:"statusId"`
-	SegmentID    int      `json:"segmentId"`
+	SegmentID    *int     `json:"segmentId"`
 	DateStarted  string   `json:"dateStarted"`
 	DateDeadline string   `json:"dateDeadline"`
 	UserIDs      *[]int   `json:"userIds"`

@@ -334,18 +334,16 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 // CREATE PROJECT WITH USERS into users_projects
 func (s *Store) ProjectCreate(payload entities.ProjectCreatePayload) (map[string]interface{}, error) {
 	tx, err := s.db.Begin()
-
 	if err != nil {
 		return nil, err
 	}
-	progress := 0.0
 
+	progress := 0.0
 	if payload.Progress != nil {
 		progress = *payload.Progress
 	}
 
 	var started, deadline *time.Time
-
 	if payload.DateStarted != "" {
 		dateStarted, err := normalizeDate(payload.DateStarted)
 		if err != nil {
@@ -361,14 +359,17 @@ func (s *Store) ProjectCreate(payload entities.ProjectCreatePayload) (map[string
 		deadline = &dateDeadline
 	}
 
+	// APPLY THE (USER IDS to users_projects) and the (segments_projects)
 	proj := entities.Project{}
-	err = tx.QueryRow("INSERT INTO projects (name, description, progress, url, statusId,  dateStarted, dateDeadline, createdAt, updatedAt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, name, description, progress, url, statusId, dateStarted, dateDeadline, createdAt, updatedAt",
+	err = tx.QueryRow(`
+		INSERT INTO projects (name, description, progress, url, statusId, dateStarted, dateDeadline, createdAt, updatedAt)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+		RETURNING id, name, description, progress, url, statusId, dateStarted, dateDeadline, createdAt, updatedAt`,
 		payload.Name,
 		payload.Description,
 		progress,
 		payload.Url,
 		payload.StatusID,
-		payload.SegmentID,
 		started,
 		deadline,
 		time.Now(),
@@ -386,17 +387,60 @@ func (s *Store) ProjectCreate(payload entities.ProjectCreatePayload) (map[string
 		&proj.UpdatedAt,
 	)
 
+	// Check for errors after running the query
+	if err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("failed to create project: %v", err)
+	}
+
+	// Check if the project ID is valid
+	if proj.ID == 0 {
+		tx.Rollback()
+		return nil, fmt.Errorf("failed to create project, project ID is invalid")
+	}
+
+	// Log the project ID after creation
+
+	// Associate users with the project if UserIDs are provided
+	if len(*payload.UserIDs) > 0 {
+		for _, userID := range *payload.UserIDs {
+			_, err = tx.Exec(`
+				INSERT INTO users_projects (user_id, project_id)
+				VALUES ($1, $2)
+			`, userID, proj.ID)
+			if err != nil {
+				tx.Rollback()
+				return nil, fmt.Errorf("failed to associate user with project %d: %v", proj.ID, err)
+			}
+		}
+	}
+
+	if payload.SegmentID != nil {
+		_, err = tx.Exec(`
+		INSERT INTO segments_projects (segmentId, projectId, deletedAt, deletedBy)
+		VALUES ($1, $2, NULL, NULL)
+	`, payload.SegmentID, proj.ID)
+		if err != nil {
+			tx.Rollback()
+			return nil, fmt.Errorf("failed to associate segment with project: %v", err)
+		}
+	}
+
+	// Handle rollback if there is any error during the process
 	if err != nil {
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
 			return nil, fmt.Errorf("insert error: %v, rollback error: %v", err, rollbackErr)
 		}
 		return nil, err
 	}
+
+	// Commit the transaction if everything went well
 	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
 
-	return buildProjectResponse(proj), err
+	// Return the project response
+	return buildProjectResponse(proj), nil
 }
 
 // UPDATE PROJECT WITH USERS into users_projects
@@ -467,9 +511,6 @@ func (s *Store) ProjectUpdate(projId int, payload entities.ProjectUpdatePayload,
 		return fmt.Errorf("failed to associate segment with project: %v", err)
 	}
 
-	print(payload.SegmentID, projId)
-
-	// Delete old user-project associations
 	_, err = tx.Exec(`
 		DELETE FROM users_projects WHERE project_id = $1
 	`, projId)
