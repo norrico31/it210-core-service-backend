@@ -11,23 +11,6 @@ import (
 
 func SeedTasks(db *sql.DB) error {
 	// Fetch statuses
-	statuses := make(map[string]int)
-	statusRows, err := db.Query("SELECT id, name FROM statuses")
-	if err != nil {
-		log.Printf("Failed to fetch statuses: %v\n", err)
-		return err
-	}
-	defer statusRows.Close()
-
-	for statusRows.Next() {
-		var id int
-		var name string
-		if err := statusRows.Scan(&id, &name); err != nil {
-			log.Printf("Failed to scan status: %v\n", err)
-			return err
-		}
-		statuses[name] = id
-	}
 
 	// Fetch users
 	users := map[string]int{}
@@ -70,6 +53,49 @@ func SeedTasks(db *sql.DB) error {
 	user1 := users["Chester"]
 	user2 := users["Mary Grace"]
 
+	priorities := make(map[string]int)
+	priorityRows, err := db.Query(`
+		SELECT 
+			id, name
+		FROM priorities
+	`)
+
+	high := priorities["High"]
+	medium := priorities["Low"]
+
+	for priorityRows.Next() {
+		var id int
+		var name string
+
+		if err = priorityRows.Scan(&id, &name); err != nil {
+			log.Printf("Failed to scan priorites: %v\n", err)
+			return err
+		}
+		priorities[name] = id
+	}
+
+	workspaces := make(map[string]int)
+	workspaceRows, err := db.Query(`
+	SELECT
+	id, name
+	FROM workspaces
+	`)
+	for workspaceRows.Next() {
+		var id int
+		var name string
+
+		if err = workspaceRows.Scan(&id, &name); err != nil {
+			log.Printf("Failed to scan priorites: %v\n", err)
+			return err
+
+		}
+
+		workspaces[name] = id
+	}
+
+	pending := workspaces["PENDING"]
+	ongoing := workspaces["ONGOING"]
+
 	proj1 := projects["Project 124 Interpreter"]
 	proj12 := projects["Project 210 Web App DOSTV"]
 
@@ -78,16 +104,34 @@ func SeedTasks(db *sql.DB) error {
 		{
 			Title:       "Design Database Schema",
 			Description: "Design the database schema for the project.",
-			StatusID:    statuses["In Progress"],
 			UserID:      &user1,
 			ProjectID:   proj12,
+			WorkspaceID: pending,
+			PriorityID:  high,
 		},
 		{
 			Title:       "Develop API Endpoints",
 			Description: "Develop all required API endpoints.",
-			StatusID:    statuses["In Progress"],
+			// UserID:      &user2,
+			ProjectID:   proj1,
+			WorkspaceID: ongoing,
+			PriorityID:  medium,
+		},
+		{
+			Title:       "Task 3",
+			Description: "Design the database schema for the project.",
+			// UserID:      &user1,
+			ProjectID:   proj12,
+			WorkspaceID: pending,
+			PriorityID:  high,
+		},
+		{
+			Title:       "Task 4",
+			Description: "Develop all required API endpoints.",
 			UserID:      &user2,
 			ProjectID:   proj1,
+			WorkspaceID: ongoing,
+			PriorityID:  medium,
 		},
 	}
 
@@ -101,9 +145,9 @@ func SeedTasks(db *sql.DB) error {
 			// Insert task
 			var taskID int
 			err := db.QueryRow(`
-				INSERT INTO tasks (title, description, statusId, userId, projectId, createdAt, updatedAt)
+				INSERT INTO tasks (title, description, workspaceId, userId, projectId, priorityId, createdAt, updatedAt)
 				VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
-			`, task.Title, task.Description, task.StatusID, task.UserID, task.ProjectID, time.Now(), time.Now()).Scan(&taskID)
+			`, task.Title, task.Description, task.WorkspaceID, task.UserID, task.ProjectID, task.PriorityID, time.Now(), time.Now()).Scan(&taskID)
 			if err != nil {
 				log.Printf("Failed to insert task %s: %v\n", task.Title, err)
 				return

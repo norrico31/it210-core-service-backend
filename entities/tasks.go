@@ -17,12 +17,15 @@ type Task struct {
 	ID          int        `json:"id"`
 	Title       string     `json:"title"`
 	Description string     `json:"description"`
-	StatusID    int        `json:"statusId"`
-	Status      Status     `json:"status"`
 	UserID      *int       `json:"userId"`
 	User        User       `json:"user"`
 	ProjectID   int        `json:"projectId"`
 	Project     Project    `json:"project"`
+	PriorityID  int        `json:"priorityId"`
+	Priority    Priority   `json:"priority"`
+	WorkspaceID int        `json:"workspaceId"`
+	Workspace   Workspace  `json:"workspace"`
+	TaskOrder   int        `json:"taskOrder"`
 	CreatedAt   time.Time  `json:"createdAt"`
 	UpdatedAt   time.Time  `json:"updatedAt"`
 	DeletedAt   *time.Time `json:"deletedAt"`
@@ -32,7 +35,8 @@ type Task struct {
 type TaskCreatePayload struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
-	StatusID    int    `json:"statusId,omitempty"`
+	PriorityID  int    `json:"priorityId"`
+	WorkspaceID int    `json:"workspaceId"`
 	UserID      int    `json:"userId,omitempty"`
 	ProjectID   int    `json:"projectId,omitempty"`
 }
@@ -41,7 +45,10 @@ type TaskUpdatePayload struct {
 	ID          string `json:"id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
-	StatusID    int    `json:"statusId,omitempty"`
+	PriorityID  int    `json:"priorityId"`
+	WorkspaceID int    `json:"workspaceId"`
 	UserID      int    `json:"userId,omitempty"`
 	ProjectID   int    `json:"projectId,omitempty"`
 }
+
+// TODO DRAGNDROP for TaskORDER

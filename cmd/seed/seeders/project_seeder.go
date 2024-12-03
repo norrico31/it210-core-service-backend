@@ -10,36 +10,89 @@ import (
 )
 
 func SeedProjects(db *sql.DB) error {
+	statuses := make(map[string]int)
+	statusRows, err := db.Query(`
+		SELECT
+			id, name
+		FROM statuses	
+	`)
+	for statusRows.Next() {
+		var id int
+		var name string
+
+		if err = statusRows.Scan(&id, &name); err != nil {
+			log.Printf("Failed to scan statuses: %v", err)
+			return err
+		}
+		statuses[name] = id
+	}
+	statusRows.Close()
+
+	active := statuses["Active"]
+	notStarted := statuses["Not Started"]
+
+	segments := make(map[string]int)
+	segmentRows, err := db.Query(`
+	SELECT
+	id, name
+	FROM segments
+	`)
+	for segmentRows.Next() {
+		var id int
+		var name string
+		if err = segmentRows.Scan(&id, &name); err != nil {
+			log.Printf("Failed to scan segments: %v", err)
+			return err
+		}
+		segments[name] = id
+	}
+
+	siyensikat := segments["SIYENSIKAT"]
+	bantayBulkan := segments["BANTAY BULKAN"]
+
+	segmentRows.Close()
+
 	projects := []entities.Project{
 		{
 			Name:        "Project 124 Interpreter",
 			Description: "Description for Project 124 nakakaiyak",
 			Progress:    float64Ptr(31),
+			StatusID:    notStarted,
+			SegmentID:   siyensikat,
 		},
 		{
 			Name:        "Project 210 Web App DOSTV",
 			Description: "Description for web app dostv chill lang",
 			Progress:    float64Ptr(20),
+			StatusID:    active,
+			SegmentID:   bantayBulkan,
 		},
 		{
 			Name:        "Single Sleeping Barber",
 			Description: "Description for single sleeping barber problem",
 			Progress:    float64Ptr(18),
+			StatusID:    notStarted,
+			SegmentID:   siyensikat,
 		},
 		{
 			Name:        "CMSC 124 Interpreter Project",
 			Description: "Description for interpreter",
 			Progress:    float64Ptr(10),
+			StatusID:    active,
 		},
 		{
 			Name:        "CMSC 124 Messenger APP Erlang",
 			Description: "Description for messenger app in erlang",
 			Progress:    float64Ptr(18),
+			StatusID:    notStarted,
+			SegmentID:   bantayBulkan,
 		},
 		{
 			Name:        "CMSC 124 Rust Superior",
 			Description: "Description for rustlings",
 			Progress:    float64Ptr(50),
+			StatusID:    active,
+			SegmentID:   siyensikat,
 		},
 	}
 

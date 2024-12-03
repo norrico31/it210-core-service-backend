@@ -16,6 +16,11 @@ type Project struct {
 	Name         string     `json:"name"`
 	Description  string     `json:"description"`
 	Progress     *float64   `json:"progress"`
+	Url          string     `json:"url"`
+	StatusID     int        `json:"statusId"`
+	Status       Status     `json:"status"`
+	SegmentID    int        `json:"segmentId"`
+	Segment      Segment    `json:"segment"`
 	DateStarted  *time.Time `json:"dateStarted"`
 	DateDeadline *time.Time `json:"dateDeadline"`
 	CreatedAt    time.Time  `json:"createdAt"`

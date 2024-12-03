@@ -11,7 +11,6 @@ CREATE TABLE IF NOT EXISTS workspaces (
     deletedBy INT REFERENCES users(id) ON DELETE
     SET NULL
 );
--- Step 2: Create a Trigger Function
 CREATE OR REPLACE FUNCTION set_col_order() RETURNS TRIGGER AS $$ BEGIN -- Assign colOrder if it's not explicitly provided
     IF NEW.colOrder IS NULL THEN
 SELECT COALESCE(MAX(colOrder), 0) + 1 INTO NEW.colOrder
@@ -21,6 +20,5 @@ END IF;
 RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
--- Step 3: Create the Trigger
 CREATE TRIGGER increment_col_order BEFORE
 INSERT ON workspaces FOR EACH ROW EXECUTE FUNCTION set_col_order();

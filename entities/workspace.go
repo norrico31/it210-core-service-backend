@@ -17,6 +17,8 @@ type Workspace struct {
 	ID          int        `json:"id"`
 	Name        string     `json:"name"`
 	Description string     `json:"description"`
+	ProjectID   int        `json:"projectId"`
+	ColOrder    int        `json:"colOrder"`
 	CreatedAt   time.Time  `json:"createdAt"`
 	UpdatedAt   time.Time  `json:"updatedAt"`
 	DeletedAt   *time.Time `json:"deletedAt,omitempty"`
@@ -27,4 +29,7 @@ type WorkspacePayload struct {
 	ID          int    `json:"id"`
 	Name        string `validate:"required,min=3,max=50"`
 	Description string `json:"description"`
+	ProjectID   int    `json:"projectId"`
 }
+
+// TODO DRAGNDROP for colOrder
