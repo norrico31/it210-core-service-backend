@@ -1,8 +1,8 @@
+-- Create tasks table
 CREATE TABLE IF NOT EXISTS tasks (
     id SERIAL PRIMARY KEY,
     title VARCHAR(100) NOT NULL,
     description TEXT,
-    SET NULL,
     userId INT REFERENCES users(id) ON DELETE
     SET NULL,
         projectId INT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS tasks (
         deletedBy INT REFERENCES users(id) ON DELETE
     SET NULL
 );
-CREATE OR REPLACE FUNCTION set_task_order() RETURNS TRIGGER AS $$ BEGIN IF NEW.taskOrder IS NULL THEN
+CREATE OR REPLACE FUNCTION set_task_order() RETURNS TRIGGER AS $$ BEGIN -- Assign taskOrder if it's not explicitly provided
+    IF NEW.taskOrder IS NULL THEN
 SELECT COALESCE(MAX(taskOrder), 0) + 1 INTO NEW.taskOrder
 FROM tasks
 WHERE workspaceId = NEW.workspaceId;

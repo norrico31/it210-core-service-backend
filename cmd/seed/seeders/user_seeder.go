@@ -3,7 +3,6 @@ package seeders
 import (
 	"database/sql"
 	"log"
-	"sync"
 	"time"
 
 	"github.com/norrico31/it210-core-service-backend/entities"
@@ -22,7 +21,7 @@ func SeedUsers(db *sql.DB) error {
 	roles := map[string]int{}
 	rows, err := db.Query("SELECT id, name FROM roles")
 	if err != nil {
-		log.Fatalf("roles not yet seed: %v", err)
+		log.Fatalf("Roles not yet seeded: %v", err)
 		return err
 	}
 	defer rows.Close()
@@ -30,9 +29,8 @@ func SeedUsers(db *sql.DB) error {
 	for rows.Next() {
 		var roleId int
 		var roleName string
-		err := rows.Scan(&roleId, &roleName)
-		if err != nil {
-			log.Fatalf("roles not yet seed: %v", err)
+		if err := rows.Scan(&roleId, &roleName); err != nil {
+			log.Fatalf("Roles not yet seeded: %v", err)
 			return err
 		}
 		roles[roleName] = roleId
@@ -75,32 +73,25 @@ func SeedUsers(db *sql.DB) error {
 		},
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(len(users))
-
 	for _, user := range users {
-		go func(u entities.User) {
-			defer wg.Done()
-
-			_, err := db.Exec(`
+		_, err := db.Exec(`
 			INSERT INTO users (firstName, lastName, age, email, roleId, password, createdAt, updatedAt) 
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-				u.FirstName,
-				u.LastName,
-				u.Age,
-				u.Email,
-				u.RoleId,
-				u.Password,
-				u.CreatedAt,
-				u.UpdatedAt)
-			if err != nil {
-				log.Printf("Failed to insert user %s: %v", u.Email, err)
-			} else {
-				log.Printf("Inserted user: %s", u.Email)
-			}
-		}(user)
+			user.FirstName,
+			user.LastName,
+			user.Age,
+			user.Email,
+			user.RoleId,
+			user.Password,
+			user.CreatedAt,
+			user.UpdatedAt)
+		if err != nil {
+			log.Printf("Failed to insert user %s: %v", user.Email, err)
+		} else {
+			log.Printf("Inserted user: %s", user.Email)
+		}
 	}
-	wg.Wait()
+
 	log.Println("Users table seeded successfully.")
 	return nil
 }

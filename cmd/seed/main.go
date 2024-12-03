@@ -14,10 +14,13 @@ func main() {
 	}
 	defer db.Close()
 	seeders.SeedRoles(db)
+	seeders.SeedPriorities(db)
+	seeders.SeedSegments(db)
 	seeders.SeedStatuses(db)
-	seeders.SeedUsers(db)
+
 	seeders.SeedProjects(db)
 	seeders.SeedWorkspace(db)
+	seeders.SeedUsers(db)
 	seeders.SeedTasks(db)
 	log.Println("Seeding successfully complete.")
 }
