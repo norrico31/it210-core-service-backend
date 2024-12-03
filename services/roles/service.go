@@ -24,6 +24,7 @@ func (h *Handler) handleGetRoles(w http.ResponseWriter, r *http.Request) {
 	roles, err := h.store.GetRoles()
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")

@@ -77,14 +77,23 @@ func (s *Store) GetUsers() ([]*entities.User, error) {
 
             p.id AS project_id,
             p.name AS project_name,
+			p.statusId AS project_status_id,
+			p.progress AS project_progress,
             p.description AS project_description,
             p.createdAt AS project_createdAt,
-            p.updatedAt AS project_updatedAt
+            p.updatedAt AS project_updatedAt,
+			
+			s.id AS status_id,
+			s.name AS status_name,
+			s.description AS status_description,
+            s.createdAt AS status_createdAt,
+            s.updatedAt AS status_updatedAt
 
         FROM users u
 		LEFT JOIN roles r ON r.id = u.roleId
-        LEFT JOIN users_projects up ON up.deletedAt IS NOT NULL AND u.id = up.user_id
+        LEFT JOIN users_projects up ON u.id = up.user_id
         LEFT JOIN projects p ON up.project_id = p.id
+		LEFT JOIN statuses s ON s.id = p.statusId
         WHERE u.deletedAt IS NULL
         ORDER BY u.id, p.id;
     `)
@@ -98,17 +107,21 @@ func (s *Store) GetUsers() ([]*entities.User, error) {
 
 	for rows.Next() {
 		var (
-			userID                       int
-			projectID                    sql.NullInt32
-			projectName                  sql.NullString
-			projectDescription           sql.NullString
-			projectCreatedAt             sql.NullTime
-			projectUpdatedAt             sql.NullTime
-			user                         entities.User
-			project                      entities.Project
-			userAge, roleId              *int
-			roleName, roleDescription    *string
-			roleCreatedAt, roleUpdatedAt *time.Time
+			userID                                     int
+			projectID                                  sql.NullInt32
+			projectName                                sql.NullString
+			projectDescription                         sql.NullString
+			Progress                                   *float64
+			projectCreatedAt                           sql.NullTime
+			projectUpdatedAt                           sql.NullTime
+			user                                       entities.User
+			project                                    entities.Project
+			userAge, roleId, statusID, projectStatusID *int
+			roleName, roleDescription                  *string
+			roleCreatedAt, roleUpdatedAt               *time.Time
+
+			statusName, statusDescription    *string
+			statusCreatedAt, statusUpdatedAt *time.Time
 		)
 
 		err := rows.Scan(
@@ -131,9 +144,17 @@ func (s *Store) GetUsers() ([]*entities.User, error) {
 
 			&projectID,
 			&projectName,
+			&projectStatusID,
+			&Progress,
 			&projectDescription,
 			&projectCreatedAt,
 			&projectUpdatedAt,
+
+			&statusID,
+			&statusName,
+			&statusDescription,
+			&statusCreatedAt,
+			&statusUpdatedAt,
 		)
 		if err != nil {
 			log.Printf("Failed to scan user or project: %v", err)
@@ -164,8 +185,20 @@ func (s *Store) GetUsers() ([]*entities.User, error) {
 			project.ID = int(projectID.Int32)
 			project.Name = projectName.String
 			project.Description = projectDescription.String
+			project.Progress = Progress
+			project.StatusID = *projectStatusID
 			project.CreatedAt = projectCreatedAt.Time
 			project.UpdatedAt = projectUpdatedAt.Time
+
+			if projectStatusID != nil {
+				project.Status = entities.Status{
+					ID:          *statusID,
+					Name:        *statusName,
+					Description: *statusDescription,
+					CreatedAt:   *statusCreatedAt,
+					UpdatedAt:   *statusUpdatedAt,
+				}
+			}
 
 			// Append the project to the user's project list
 			userMap[userID].Projects = append(userMap[userID].Projects, project)
@@ -182,120 +215,180 @@ func (s *Store) GetUsers() ([]*entities.User, error) {
 }
 
 func (s *Store) GetUserById(id int) (*entities.User, error) {
-	user := entities.User{}
-	var (
-		roleID, userAge              *int
-		roleName, roleDescription    *string
-		roleCreatedAt, roleUpdatedAt *time.Time
-	)
-
-	err := s.db.QueryRow(`
+	rows, err := s.db.Query(`
 		SELECT 
-            u.id AS user_id,
-            u.firstName,
-            u.lastName,
-            u.email,
-            u.age,
+			u.id AS user_id,
+			u.firstName,
+			u.lastName,
+			u.email,
+			u.age,
 			u.roleId,
-            u.lastActiveAt,
-            u.createdAt,
-            u.updatedAt,
-            u.deletedAt,
+			u.lastActiveAt,
+			u.createdAt,
+			u.updatedAt,
+			u.deletedAt,
 
 			r.id AS role_id,
 			r.name AS role_name,
 			r.description AS role_description,
 			r.createdAt AS role_created_at,
-			r.updatedAt AS role_updated_at
+			r.updatedAt AS role_updated_at,
 
-        FROM users u
-		LEFT JOIN roles r ON r.deletedAt IS NULL AND r.id = u.roleId
-		WHERE u.deletedAt IS NULL AND u.id = $1
-	`, id).Scan(
-		&user.ID,
-		&user.FirstName,
-		&user.LastName,
-		&user.Email,
-		&userAge,
-		&user.RoleId,
-		&user.LastActiveAt,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-		&user.DeletedAt,
-		&roleID,
-		&roleName,
-		&roleDescription,
-		&roleCreatedAt,
-		&roleUpdatedAt,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("user id %v not found!", id)
-	}
-
-	if userAge != nil {
-		user.Age = *userAge
-	}
-
-	if user.RoleId != nil {
-		user.Role = entities.Role{
-			ID:          *roleID,
-			Name:        *roleName,
-			Description: *roleDescription,
-			CreatedAt:   *roleCreatedAt,
-			UpdatedAt:   *roleUpdatedAt,
-		}
-	}
-
-	rows, err := s.db.Query(`
-		SELECT 
 			p.id AS project_id,
 			p.name AS project_name,
+			p.statusId AS project_status_id,
+			p.progress AS project_progress,
+			p.segmentId AS project_segment_id,
 			p.description AS project_description,
-			p.progress,
-			p.dateStarted,
-			p.dateDeadline,
 			p.createdAt AS project_created_at,
-			p.updatedAt AS project_updated_at
+			p.updatedAt AS project_updated_at,
 
-		FROM users_projects up
+			s.id AS status_id,
+			s.name AS status_name,
+			s.description AS status_description,
+			s.createdAt AS status_created_at,
+			s.updatedAt AS status_updated_at,
+			
+			seg.id AS segment_id,
+			seg.name AS segment_name,
+			seg.description AS segment_description,
+			seg.createdAt AS segment_created_at,
+			seg.updatedAt AS segment_updated_at
+
+		FROM users u
+		LEFT JOIN roles r ON r.id = u.roleId
+		LEFT JOIN users_projects up ON u.id = up.user_id
 		LEFT JOIN projects p ON up.project_id = p.id
-		WHERE up.user_id = $1 AND p.deletedAt IS NULL
+		LEFT JOIN statuses s ON s.id = p.statusId
+		LEFT JOIN segments seg ON seg.id = p.segmentId
+		WHERE u.id = $1 AND u.deletedAt IS NULL
+		ORDER BY p.id;
 	`, id)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query users_projects: %v", err)
+		return nil, fmt.Errorf("failed to query user by id: %v", err)
 	}
 	defer rows.Close()
 
-	projects := []entities.Project{}
+	var (
+		userID                                                                                                                                 int
+		user                                                                                                                                   entities.User
+		roleID, userAge, projectStatusID, statusID, projectSegmentID                                                                           *int
+		roleName, roleDescription, statusName, statusDescription                                                                               *string
+		roleCreatedAt, roleUpdatedAt, projectCreatedAt, projectUpdatedAt, statusCreatedAt, statusUpdatedAt, segmentCreatedAt, segmentUpdatedAt *time.Time
+		project                                                                                                                                entities.Project
+		segmentID                                                                                                                              *int
+		segmentName, segmentDescription                                                                                                        *string
+	)
+
+	// Using a map to track the user and its associated projects
+	userMap := make(map[int]*entities.User)
+
 	for rows.Next() {
-		proj := entities.Project{}
 		err := rows.Scan(
-			&proj.ID,
-			&proj.Name,
-			&proj.Description,
-			&proj.Progress,
-			&proj.DateStarted,
-			&proj.DateDeadline,
-			&proj.CreatedAt,
-			&proj.UpdatedAt,
+			&userID,
+			&user.FirstName,
+			&user.LastName,
+			&user.Email,
+			&userAge,
+			&user.RoleId,
+			&user.LastActiveAt,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+			&user.DeletedAt,
+
+			&roleID,
+			&roleName,
+			&roleDescription,
+			&roleCreatedAt,
+			&roleUpdatedAt,
+
+			&project.ID,
+			&project.Name,
+			&projectStatusID,
+			&project.Progress,
+			&projectSegmentID,
+			&project.Description,
+			&projectCreatedAt,
+			&projectUpdatedAt,
+
+			&statusID,
+			&statusName,
+			&statusDescription,
+			&statusCreatedAt,
+			&statusUpdatedAt,
+
+			&segmentID,
+			&segmentName,
+			&segmentDescription,
+			&segmentCreatedAt,
+			&segmentUpdatedAt,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan project: %v", err)
+			return nil, fmt.Errorf("failed to scan user or project: %v", err)
 		}
-		projects = append(projects, proj)
+
+		// Set user attributes
+		user.ID = userID
+		if userAge != nil {
+			user.Age = *userAge
+		}
+		if roleID != nil {
+			user.Role = entities.Role{
+				ID:          *roleID,
+				Name:        *roleName,
+				Description: *roleDescription,
+				CreatedAt:   *roleCreatedAt,
+				UpdatedAt:   *roleUpdatedAt,
+			}
+		}
+
+		// Initialize user if not already done
+		if _, exists := userMap[userID]; !exists {
+			userMap[userID] = &user
+		}
+
+		// Add project if exists
+		if project.ID != 0 {
+			project.StatusID = *projectStatusID
+			if statusID != nil {
+				project.Status = entities.Status{
+					ID:          *statusID,
+					Name:        *statusName,
+					Description: *statusDescription,
+					CreatedAt:   *statusCreatedAt,
+					UpdatedAt:   *statusUpdatedAt,
+				}
+			}
+			project.CreatedAt = *projectCreatedAt
+			project.UpdatedAt = *projectUpdatedAt
+
+			// Add segment to project
+			if segmentID != nil {
+				project.SegmentID = *segmentID
+				project.Segment = entities.Segment{
+					ID:          *segmentID,
+					Name:        *segmentName,
+					Description: *segmentDescription,
+					CreatedAt:   *segmentCreatedAt,
+					UpdatedAt:   *segmentUpdatedAt,
+				}
+			}
+
+			// Append project to user
+			userMap[userID].Projects = append(userMap[userID].Projects, project)
+		}
 	}
 
 	if rows.Err() != nil {
-		return nil, fmt.Errorf("error iterating over projects rows: %v", rows.Err())
+		return nil, fmt.Errorf("error iterating over rows: %v", rows.Err())
 	}
 
-	user.Projects = projects
-
-	if user.ID == 0 {
-		return nil, fmt.Errorf("user not found")
+	// Return the first user found (there should only be one)
+	if len(userMap) > 0 {
+		return userMap[userID], nil
 	}
 
-	return &user, nil
+	return nil, fmt.Errorf("user with id %d not found", id)
 }
 
 func (s *Store) GetUserByEmail(email string) (*entities.User, error) {
@@ -405,6 +498,7 @@ func (s *Store) CreateUser(payload entities.UserCreatePayload) error {
 	return nil
 }
 
+// TODO: ADD USERID IN SEGMENT and OTHER RELATIONS HERE
 func (s *Store) UpdateUser(userId int, user entities.UserUpdatePayload, projectIDs []int) error {
 	tx, err := s.db.Begin()
 	if err != nil {

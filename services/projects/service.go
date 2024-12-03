@@ -66,6 +66,7 @@ func (h *Handler) handleGetProject(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJSON(w, http.StatusOK, proj)
 }
 
+// TODO
 func (h *Handler) handleProjectCreate(w http.ResponseWriter, r *http.Request) {
 	payload := entities.ProjectCreatePayload{}
 
@@ -89,6 +90,7 @@ func (h *Handler) handleProjectCreate(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJSON(w, http.StatusCreated, proj)
 }
 
+// TODO
 func (h *Handler) handleProjectUpdate(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	str, ok := vars["projectId"]

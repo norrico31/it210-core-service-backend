@@ -3,6 +3,7 @@ package seeders
 import (
 	"database/sql"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/norrico31/it210-core-service-backend/entities"
@@ -16,7 +17,7 @@ func SeedProjects(db *sql.DB) error {
 		FROM statuses	
 	`)
 	if err != nil {
-		log.Printf("Failed to query statuses: %v", err)
+		log.Printf("Failed to fetch statuses: %v", err)
 		return err
 	}
 	defer statusRows.Close()
@@ -24,6 +25,7 @@ func SeedProjects(db *sql.DB) error {
 	for statusRows.Next() {
 		var id int
 		var name string
+
 		if err = statusRows.Scan(&id, &name); err != nil {
 			log.Printf("Failed to scan statuses: %v", err)
 			return err
@@ -41,7 +43,7 @@ func SeedProjects(db *sql.DB) error {
 		FROM segments
 	`)
 	if err != nil {
-		log.Printf("Failed to query segments: %v", err)
+		log.Printf("Failed to fetch segments: %v", err)
 		return err
 	}
 	defer segmentRows.Close()
@@ -104,60 +106,71 @@ func SeedProjects(db *sql.DB) error {
 		},
 	}
 
+	var wg sync.WaitGroup
 	for _, project := range projects {
-		_, err := db.Exec(`
-			INSERT INTO projects (name, description, progress, statusId, segmentId, createdAt, updatedAt)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
-		`, project.Name, project.Description, project.Progress, project.StatusID, project.SegmentID, time.Now(), time.Now())
+		wg.Add(1)
 
-		if err != nil {
-			log.Printf("Failed to insert project %s: %v\n", project.Name, err)
-			continue
-		}
-		log.Printf("Successfully inserted project %s\n", project.Name)
+		go func(project entities.Project) {
+			defer wg.Done()
 
-		var projectId int
-		err = db.QueryRow(`SELECT id FROM projects WHERE name = $1`, project.Name).Scan(&projectId)
-		if err != nil {
-			log.Printf("Failed to fetch project ID for %s: %v\n", project.Name, err)
-			continue
-		}
-
-		users := []entities.User{}
-		rows, err := db.Query(`SELECT id FROM users`)
-		if err != nil {
-			log.Printf("Failed to fetch users: %v\n", err)
-			continue
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var user entities.User
-			if err := rows.Scan(&user.ID); err != nil {
-				log.Printf("Failed to scan user: %v\n", err)
-				continue
-			}
-			users = append(users, user)
-		}
-
-		if err := rows.Err(); err != nil {
-			log.Printf("Error iterating over users: %v\n", err)
-			continue
-		}
-
-		for _, user := range users {
-			_, err = db.Exec(`
-				INSERT INTO users_projects (project_id, user_id) 
-				VALUES ($1, $2)
-			`, projectId, user.ID)
+			_, err := db.Exec(`
+				INSERT INTO projects (name, description, progress, statusId, segmentId, createdAt, updatedAt)
+				VALUES ($1, $2, $3, $4, $5, $6, $7)
+			`, project.Name, project.Description, project.Progress, project.StatusID, project.SegmentID, time.Now(), time.Now())
 
 			if err != nil {
-				log.Printf("Failed to associate user %d with project %d: %v\n", user.ID, projectId, err)
-				continue
+				log.Printf("Failed to insert project %s: %v\n", project.Name, err)
+				return
 			}
-			log.Printf("Successfully associated user %d with project %d\n", user.ID, projectId)
-		}
+			log.Printf("Successfully inserted project %s\n", project.Name)
+
+			var projectId int
+			err = db.QueryRow(`SELECT id FROM projects WHERE name = $1`, project.Name).Scan(&projectId)
+			if err != nil {
+				log.Printf("Failed to fetch project ID for %s: %v\n", project.Name, err)
+				return
+			}
+
+			users := []int{}
+			rows, err := db.Query(`SELECT id FROM users`)
+			if err != nil {
+				log.Printf("Failed to fetch users: %v\n", err)
+				return
+			}
+			defer rows.Close()
+
+			for rows.Next() {
+				var id int
+				if err := rows.Scan(&id); err != nil {
+					log.Printf("Failed to scan user: %v\n", err)
+					return
+				}
+				users = append(users, id)
+			}
+
+			if err := rows.Err(); err != nil {
+				log.Printf("Error iterating over users: %v\n", err)
+				return
+			}
+
+			// Insert project-user associations
+			for _, userId := range users {
+				// Ensure HALA message is printed even if no user associations occur
+				_, err = db.Exec(`
+				INSERT INTO users_projects (project_id, user_id) 
+				VALUES ($1, $2)
+				`, projectId, userId)
+
+				if err != nil {
+					log.Printf("Failed to associate user %d with project %d: %v\n", userId, projectId, err)
+					continue
+				}
+				log.Printf("Successfully associated user %d with project %d\n", userId, projectId)
+			}
+		}(project)
 	}
+
+	wg.Wait()
 
 	return nil
 }

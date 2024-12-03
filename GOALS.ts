@@ -1,7 +1,5 @@
 // TODOS: seeders for new tables 
-
-// CRUD 
-
+// PRIORITY create|update(path) FIRST!
 
 
 // PERMISSIONS

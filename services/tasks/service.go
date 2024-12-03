@@ -20,7 +20,7 @@ func NewHandler(store entities.TaskStore) *Handler {
 }
 
 func (h *Handler) handleGetTasks(w http.ResponseWriter, r *http.Request) {
-	tasks, err := h.store.GetTasks("IS NULL")
+	tasks, err := h.store.GetTasks()
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
 		return
@@ -32,7 +32,7 @@ func (h *Handler) handleGetTasks(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) handleGetDeletedTasks(w http.ResponseWriter, r *http.Request) {
-	tasks, err := h.store.GetTasks("IS NOT NULL")
+	tasks, err := h.store.GetTasks()
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
 		return

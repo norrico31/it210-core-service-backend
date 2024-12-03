@@ -5,7 +5,7 @@ import (
 )
 
 type TaskStore interface {
-	GetTasks(string) ([]*Task, error)
+	GetTasks() ([]*Task, error)
 	GetTask(int) (*Task, error)
 	TaskCreate(TaskCreatePayload) (*Task, error)
 	TaskUpdate(TaskUpdatePayload) (*Task, error)
@@ -14,13 +14,13 @@ type TaskStore interface {
 }
 
 type Task struct {
-	ID          int        `json:"id"`
-	Title       string     `json:"title"`
-	Description string     `json:"description"`
-	UserID      *int       `json:"userId"`
-	User        User       `json:"user"`
-	ProjectID   int        `json:"projectId"`
-	Project     Project    `json:"project"`
+	ID          int    `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	UserID      *int   `json:"userId"`
+	User        User   `json:"user"`
+	// ProjectID   int        `json:"projectId"`
+	// Project     Project    `json:"project"`
 	PriorityID  int        `json:"priorityId"`
 	Priority    Priority   `json:"priority"`
 	WorkspaceID int        `json:"workspaceId"`
@@ -38,7 +38,7 @@ type TaskCreatePayload struct {
 	PriorityID  int    `json:"priorityId"`
 	WorkspaceID int    `json:"workspaceId"`
 	UserID      int    `json:"userId,omitempty"`
-	ProjectID   int    `json:"projectId,omitempty"`
+	// ProjectID   int    `json:"projectId,omitempty"`
 }
 
 type TaskUpdatePayload struct {
@@ -48,7 +48,7 @@ type TaskUpdatePayload struct {
 	PriorityID  int    `json:"priorityId"`
 	WorkspaceID int    `json:"workspaceId"`
 	UserID      int    `json:"userId,omitempty"`
-	ProjectID   int    `json:"projectId,omitempty"`
+	// ProjectID   int    `json:"projectId,omitempty"`
 }
 
 // TODO DRAGNDROP for TaskORDER

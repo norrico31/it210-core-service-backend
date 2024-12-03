@@ -90,8 +90,8 @@ func SeedTasks(db *sql.DB) error {
 	pending := workspaces["PENDING"]
 	ongoing := workspaces["ONGOING"]
 
-	proj1 := projects["Project 124 Interpreter"]
-	proj12 := projects["Project 210 Web App DOSTV"]
+	// proj124 := projects["Project 124 Interpreter"]
+	// proj210 := projects["Project 210 Web App DOSTV"]
 
 	tasks := []entities.Task{
 		{
@@ -99,23 +99,23 @@ func SeedTasks(db *sql.DB) error {
 			Description: "Design the database schema for the project.",
 			WorkspaceID: pending,
 			UserID:      &user1,
-			ProjectID:   proj12,
-			PriorityID:  high,
+			// ProjectID:   proj124,
+			PriorityID: high,
 		},
 		{
 			Title:       "Develop API Endpoints",
 			Description: "Develop all required API endpoints.",
 			WorkspaceID: ongoing,
-			// UserID:      &user2,
-			ProjectID:  proj1,
+			UserID:      &user2,
+			// ProjectID:   proj210,
 			PriorityID: low,
 		},
 		{
 			Title:       "Task 3",
 			Description: "Design the database schema for the project.",
 			WorkspaceID: pending,
-			// UserID:      &user1,
-			ProjectID:  proj12,
+			UserID:      &user1,
+			// ProjectID:   proj124,
 			PriorityID: high,
 		},
 		{
@@ -123,17 +123,17 @@ func SeedTasks(db *sql.DB) error {
 			Description: "Develop all required API endpoints.",
 			WorkspaceID: ongoing,
 			UserID:      &user2,
-			ProjectID:   proj1,
-			PriorityID:  low,
+			// ProjectID:   proj210,
+			PriorityID: low,
 		},
 	}
 
 	for _, task := range tasks {
 		var taskID int
 		err := db.QueryRow(`
-			INSERT INTO tasks (title, description, workspaceId, userId, projectId, priorityId, createdAt, updatedAt)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id
-		`, task.Title, task.Description, task.WorkspaceID, task.UserID, task.ProjectID, task.PriorityID, time.Now(), time.Now()).Scan(&taskID)
+			INSERT INTO tasks (title, description, workspaceId, userId, priorityId, createdAt, updatedAt)
+			VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
+		`, task.Title, task.Description, task.WorkspaceID, task.UserID, task.PriorityID, time.Now(), time.Now()).Scan(&taskID)
 		if err != nil {
 			log.Printf("Failed to insert task %s: %v\n", task.Title, err)
 			continue

@@ -18,8 +18,10 @@ type Workspace struct {
 	Name        string     `json:"name"`
 	Description string     `json:"description"`
 	ProjectID   int        `json:"projectId"`
+	Project     Project    `json:"project"`
 	ColOrder    int        `json:"colOrder"`
 	CreatedAt   time.Time  `json:"createdAt"`
+	Tasks       []Task     `json:"tasks"`
 	UpdatedAt   time.Time  `json:"updatedAt"`
 	DeletedAt   *time.Time `json:"deletedAt,omitempty"`
 	DeletedBy   *time.Time `json:"deletedBy,omitempty"`

@@ -16,11 +16,10 @@ func main() {
 	seeders.SeedRoles(db)
 	seeders.SeedPriorities(db)
 	seeders.SeedSegments(db)
+	seeders.SeedUsers(db)
 	seeders.SeedStatuses(db)
-
 	seeders.SeedProjects(db)
 	seeders.SeedWorkspace(db)
-	seeders.SeedUsers(db)
 	seeders.SeedTasks(db)
 	log.Println("Seeding successfully complete.")
 }

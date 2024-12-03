@@ -43,31 +43,9 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 			u.deletedAt AS user_deleted_at,
 			u.deletedBy AS user_deleted_by,
 
-			t.id AS task_id,
-			t.title AS task_title,
-			t.description AS task_description,
-			t.statusId AS task_status_id,
-			t.userId AS task_user_id,
-			t.projectId AS task_project_id,
-			t.createdAt AS task_created_at,
-			t.updatedAt AS task_updated_at,
-			t.deletedAt AS task_deleted_at,
-			t.deletedBy AS task_deleted_by,
-
 			s.id status_id,
 			s.name status_name,
 			s.description status_description,
-
-			ut.id AS user_task_id,
-			ut.firstName AS user_task_first_name,
-			ut.lastName AS user_task_last_name,
-			ut.email AS user_task_email,
-			ut.age AS user_task_age,
-			ut.lastActiveAt AS user_task_last_active_at,
-			ut.createdAt AS user_task_created_at,
-			ut.updatedAt AS user_task_updated_at,
-			ut.deletedAt AS user_task_deleted_at,
-			ut.deletedBy AS user_task_deleted_by,
 
 			r.id role_id,
 			r.name role_name,
@@ -83,11 +61,7 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 		LEFT JOIN
 			users u ON up.deletedAt IS NULL AND up.user_id = u.id
 		LEFT JOIN
-			tasks t ON t.deletedAt IS NULL AND t.projectId = p.id
-		LEFT JOIN
-			statuses s ON s.deletedAt IS NULL AND s.id = t.statusId
-		LEFT JOIN
-			users ut ON ut.deletedAt IS NULL AND ut.id = t.userId
+			statuses s ON s.deletedAt IS NULL AND s.id = p.statusId
 		LEFT JOIN
 			roles r ON r.deletedAt IS NULL AND r.id = u.roleId
 		WHERE
@@ -108,7 +82,7 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 		var project entities.Project
 
 		var user entities.User
-		var task entities.Task
+		// var task entities.Task
 		var status entities.Status
 		var statusID *int
 		var statusName, statusDescription *string
@@ -119,19 +93,19 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 		var userLastActiveAt, userCreatedAt, userUpdatedAt, userDeletedAt *time.Time
 
 		// Use pointers for task fields
-		var taskID, taskStatusID, taskUserID, taskProjectID, taskDeletedBy *int
-		var taskTitle, taskDescription *string
-		var taskCreatedAt, taskUpdatedAt, taskDeletedAt *time.Time
+		// var taskID, taskUserID, taskDeletedBy *int
+		// var taskTitle, taskDescription *string
+		// var taskCreatedAt, taskUpdatedAt, taskDeletedAt *time.Time
 
-		var userIDTask, taskUserAge, taskUserDeletedBy *int
-		var taskUserFirstName, taskUserLastName, taskUserEmail *string
-		var taskUserLastActiveAt, taskUserCreatedAt, taskUserUpdatedAt, taskUserDeletedAt *time.Time
+		// var userIDTask, taskUserAge, taskUserDeletedBy *int
+		// var taskUserFirstName, taskUserLastName, taskUserEmail *string
+		// var taskUserLastActiveAt, taskUserCreatedAt, taskUserUpdatedAt, taskUserDeletedAt *time.Time
 
 		var roleId *int
 		var roleName, roleDescription *string
 		var roleCreatedAt, roleUpdatedAt, roleDeletedAt *time.Time
 
-		taskUser := entities.User{}
+		// taskUser := entities.User{}
 
 		// Scan project, user, and task data
 		err = rows.Scan(
@@ -139,11 +113,11 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 
 			&userID, &userFirstName, &userLastName, &userEmail, &userAge, &userRoleId, &userLastActiveAt, &userCreatedAt, &userUpdatedAt, &userDeletedAt, &userDeletedBy,
 
-			&taskID, &taskTitle, &taskDescription, &taskStatusID, &taskUserID, &taskProjectID, &taskCreatedAt, &taskUpdatedAt, &taskDeletedAt, &taskDeletedBy,
+			// &taskID, &taskTitle, &taskDescription, &taskUserID, &taskCreatedAt, &taskUpdatedAt, &taskDeletedAt, &taskDeletedBy,
 
 			&statusID, &statusName, &statusDescription,
 
-			&userIDTask, &taskUserFirstName, &taskUserLastName, &taskUserEmail, &taskUserAge, &taskUserLastActiveAt, &taskUserCreatedAt, &taskUserUpdatedAt, &taskUserDeletedAt, &taskUserDeletedBy,
+			// &userIDTask, &taskUserFirstName, &taskUserLastName, &taskUserEmail, &taskUserAge, &taskUserLastActiveAt, &taskUserCreatedAt, &taskUserUpdatedAt, &taskUserDeletedAt, &taskUserDeletedBy,
 
 			&roleId, &roleName, &roleDescription, &roleCreatedAt, &roleUpdatedAt, &roleDeletedAt,
 		)
@@ -203,73 +177,73 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 
 		if statusID != nil {
 			status.ID = *statusID
-		}
+			if statusName != nil {
+				status.Name = *statusName
+			}
 
-		if statusName != nil {
-			status.Name = *statusName
-		}
-
-		if statusDescription != nil {
-			status.Description = *statusDescription
+			if statusDescription != nil {
+				status.Description = *statusDescription
+			}
+			project.Status = status
 		}
 
 		// Add task data if available and ensure task is not duplicated for the project
-		if taskID != nil {
-			// Check if the task is already in the project's tasks
-			taskExists := false
-			for _, existingTask := range projectsMap[projectID].Tasks {
-				if existingTask.ID == *taskID {
-					taskExists = true
-					break
-				}
-			}
+		// if taskID != nil {
+		// 	// Check if the task is already in the project's tasks
+		// 	taskExists := false
+		// 	for _, existingTask := range projectsMap[projectID].Tasks {
+		// 		if existingTask.ID == *taskID {
+		// 			taskExists = true
+		// 			break
+		// 		}
+		// 	}
 
-			// debug this
-			if taskUserID != nil {
-				taskUser.ID = *userIDTask
-				if userFirstName != nil {
-					taskUser.FirstName = *taskUserFirstName
-				}
-				if userLastName != nil {
-					taskUser.LastName = *taskUserLastName
-				}
-				if userEmail != nil {
-					taskUser.Email = *taskUserEmail
-				}
-				if userAge != nil {
-					taskUser.Age = *taskUserAge
-				}
+		// 	// debug this
+		// 	if taskUserID != nil {
+		// 		taskUser.ID = *userIDTask
+		// 		if userFirstName != nil {
+		// 			taskUser.FirstName = *taskUserFirstName
+		// 		}
+		// 		if userLastName != nil {
+		// 			taskUser.LastName = *taskUserLastName
+		// 		}
+		// 		if userEmail != nil {
+		// 			taskUser.Email = *taskUserEmail
+		// 		}
+		// 		if userAge != nil {
+		// 			taskUser.Age = *taskUserAge
+		// 		}
 
-				taskUser.LastActiveAt = taskUserLastActiveAt
-				if taskUserCreatedAt != nil {
-					taskUser.CreatedAt = *taskUserCreatedAt
-				}
-				if taskUserUpdatedAt != nil {
-					taskUser.UpdatedAt = *taskUserUpdatedAt
-				}
-				taskUser.DeletedAt = taskUserDeletedAt
-				taskUser.DeletedBy = taskUserDeletedBy
-			}
+		// 		taskUser.LastActiveAt = taskUserLastActiveAt
+		// 		if taskUserCreatedAt != nil {
+		// 			taskUser.CreatedAt = *taskUserCreatedAt
+		// 		}
+		// 		if taskUserUpdatedAt != nil {
+		// 			taskUser.UpdatedAt = *taskUserUpdatedAt
+		// 		}
+		// 		taskUser.DeletedAt = taskUserDeletedAt
+		// 		taskUser.DeletedBy = taskUserDeletedBy
+		// 	}
 
-			// If task doesn't already exist, add it
-			if !taskExists {
-				task.ID = *taskID
-				task.Title = *taskTitle
-				task.Description = *taskDescription
-				task.StatusID = *taskStatusID
-				task.UserID = taskUserID
-				task.ProjectID = *taskProjectID
-				task.CreatedAt = *taskCreatedAt
-				task.UpdatedAt = *taskUpdatedAt
-				task.DeletedAt = taskDeletedAt
-				task.DeletedBy = taskDeletedBy
-				task.Status = status
-				task.User = taskUser
+		// 	// If task doesn't already exist, add it
+		// 	if !taskExists {
+		// 		task.ID = *taskID
+		// 		task.Title = *taskTitle
+		// 		task.Description = *taskDescription
+		// 		// task.StatusID = *taskStatusID
+		// 		task.UserID = taskUserID
+		// 		// task.ProjectID = *taskProjectID
+		// 		task.CreatedAt = *taskCreatedAt
+		// 		task.UpdatedAt = *taskUpdatedAt
+		// 		task.DeletedAt = taskDeletedAt
+		// 		task.DeletedBy = taskDeletedBy
+		// 		// task.Status = status
+		// 		task.User = taskUser
 
-				// Add task to the project's task list
-				projectsMap[projectID].Tasks = append(projectsMap[projectID].Tasks, task)
-			}
-		}
+		// 		// Add task to the project's task list
+		// 		projectsMap[projectID].Tasks = append(projectsMap[projectID].Tasks, task)
+		// 	}
+		// }
 
 	}
 
@@ -312,17 +286,6 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 			u.updatedAt AS user_updated_at,
 			u.deletedAt AS user_deleted_at,
 			u.deletedBy AS user_deleted_by,
-
-			t.id AS task_id,
-			t.title AS task_title,
-			t.description AS task_description,
-			t.statusId AS task_status_id,
-			t.userId AS task_user_id,
-			t.projectId AS task_project_id,
-			t.createdAt AS task_created_at,
-			t.updatedAt AS task_updated_at,
-			t.deletedAt AS task_deleted_at,
-			t.deletedBy AS task_deleted_by,
 
 			s.id status_id,
 			s.name status_name,
@@ -369,12 +332,12 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 		var userFirstName, userLastName, userEmail *string
 		var userLastActiveAt, userCreatedAt, userUpdatedAt, userDeletedAt *time.Time
 
-		task := entities.Task{}
-		var taskID, taskStatusID, taskUserID, taskProjectID, taskDeletedBy *int
-		var taskTitle, taskDescription *string
-		var taskCreatedAt, taskUpdatedAt, taskDeletedAt *time.Time
+		// task := entities.Task{}
+		// var taskID, taskStatusID, taskUserID, taskDeletedBy *int
+		// var taskTitle, taskDescription *string
+		// var taskCreatedAt, taskUpdatedAt, taskDeletedAt *time.Time
 
-		taskUser := entities.User{}
+		// taskUser := entities.User{}
 		var userIDTask, taskUserAge, taskUserDeletedBy *int
 		var taskUserFirstName, taskUserLastName, taskUserEmail *string
 		var taskUserLastActiveAt, taskUserCreatedAt, taskUserUpdatedAt, taskUserDeletedAt *time.Time
@@ -386,7 +349,7 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 		err := rows.Scan(
 			&project.ID, &project.Name, &project.Description, &project.Progress, &dateStarted, &dateDeadline, &project.CreatedAt, &project.UpdatedAt, &project.DeletedAt, &project.DeletedBy,
 			&userID, &userFirstName, &userLastName, &userEmail, &userAge, &userLastActiveAt, &userCreatedAt, &userUpdatedAt, &userDeletedAt, &userDeletedBy,
-			&taskID, &taskTitle, &taskDescription, &taskStatusID, &taskUserID, &taskProjectID, &taskCreatedAt, &taskUpdatedAt, &taskDeletedAt, &taskDeletedBy,
+			// &taskID, &taskTitle, &taskDescription, &taskStatusID, &taskUserID, &taskCreatedAt, &taskUpdatedAt, &taskDeletedAt, &taskDeletedBy,
 			&statusID, &statusName, &statusDescription,
 			&userIDTask, &taskUserFirstName, &taskUserLastName, &taskUserEmail, &taskUserAge, &taskUserLastActiveAt, &taskUserCreatedAt, &taskUserUpdatedAt, &taskUserDeletedAt, &taskUserDeletedBy,
 		)
@@ -432,71 +395,71 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 
 		if statusID != nil {
 			status.ID = *statusID
-		}
-
-		if statusName != nil {
-			status.Name = *statusName
-		}
-
-		if statusDescription != nil {
-			status.Description = *statusDescription
-		}
-
-		if taskID != nil {
-			// Check if the task is already in the project's tasks
-			taskExists := false
-			for _, existingTask := range project.Tasks {
-				if existingTask.ID == *taskID {
-					taskExists = true
-					break
-				}
+			if statusName != nil {
+				status.Name = *statusName
 			}
 
-			// debug this
-			if !taskExists {
-				task.ID = *taskID
-				task.Title = *taskTitle
-				task.Description = *taskDescription
-				task.StatusID = *taskStatusID
-				task.UserID = taskUserID
-				task.ProjectID = *taskProjectID
-				task.CreatedAt = *taskCreatedAt
-				task.UpdatedAt = *taskUpdatedAt
-				task.DeletedAt = taskDeletedAt
-				task.DeletedBy = taskDeletedBy
-				task.Status = status
-				if taskUserID != nil {
-					taskUser.ID = *userIDTask
-					if userFirstName != nil {
-						taskUser.FirstName = *taskUserFirstName
-					}
-					if userLastName != nil {
-						taskUser.LastName = *taskUserLastName
-					}
-					if userEmail != nil {
-						taskUser.Email = *taskUserEmail
-					}
-					if userAge != nil {
-						taskUser.Age = *taskUserAge
-					}
-
-					taskUser.LastActiveAt = taskUserLastActiveAt
-					if taskUserCreatedAt != nil {
-						taskUser.CreatedAt = *taskUserCreatedAt
-					}
-					if taskUserUpdatedAt != nil {
-						taskUser.UpdatedAt = *taskUserUpdatedAt
-					}
-					taskUser.DeletedAt = taskUserDeletedAt
-					taskUser.DeletedBy = taskUserDeletedBy
-				}
-
-				task.User = taskUser
-
-				// Add task to the project's task list
-				project.Tasks = append(project.Tasks, task)
+			if statusDescription != nil {
+				status.Description = *statusDescription
 			}
+			project.Status = status
 		}
+
+		// if taskID != nil {
+		// 	// Check if the task is already in the project's tasks
+		// 	taskExists := false
+		// 	for _, existingTask := range project.Tasks {
+		// 		if existingTask.ID == *taskID {
+		// 			taskExists = true
+		// 			break
+		// 		}
+		// 	}
+
+		// 	// debug this
+		// 	if !taskExists {
+		// 		task.ID = *taskID
+		// 		task.Title = *taskTitle
+		// 		task.Description = *taskDescription
+		// 		// task.StatusID = *taskStatusID
+		// 		task.UserID = taskUserID
+		// 		// task.ProjectID = *taskProjectID
+		// 		task.CreatedAt = *taskCreatedAt
+		// 		task.UpdatedAt = *taskUpdatedAt
+		// 		task.DeletedAt = taskDeletedAt
+		// 		task.DeletedBy = taskDeletedBy
+		// 		// task.Status = status
+		// 		if taskUserID != nil {
+		// 			taskUser.ID = *userIDTask
+		// 			if userFirstName != nil {
+		// 				taskUser.FirstName = *taskUserFirstName
+		// 			}
+		// 			if userLastName != nil {
+		// 				taskUser.LastName = *taskUserLastName
+		// 			}
+		// 			if userEmail != nil {
+		// 				taskUser.Email = *taskUserEmail
+		// 			}
+		// 			if userAge != nil {
+		// 				taskUser.Age = *taskUserAge
+		// 			}
+
+		// 			taskUser.LastActiveAt = taskUserLastActiveAt
+		// 			if taskUserCreatedAt != nil {
+		// 				taskUser.CreatedAt = *taskUserCreatedAt
+		// 			}
+		// 			if taskUserUpdatedAt != nil {
+		// 				taskUser.UpdatedAt = *taskUserUpdatedAt
+		// 			}
+		// 			taskUser.DeletedAt = taskUserDeletedAt
+		// 			taskUser.DeletedBy = taskUserDeletedBy
+		// 		}
+
+		// 		task.User = taskUser
+
+		// 		// Add task to the project's task list
+		// 		project.Tasks = append(project.Tasks, task)
+		// 	}
+		// }
 
 	}
 

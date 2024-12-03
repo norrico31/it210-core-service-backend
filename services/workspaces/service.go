@@ -21,9 +21,17 @@ func NewHandler(store entities.WorkspaceStore) *Handler {
 }
 
 func (h *Handler) handleGetWorkspaces(w http.ResponseWriter, r *http.Request) {
+	// vars := mux.Vars(r)
+	// str, ok := vars["projectId"]
+	// if !ok {
+	// 	utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing workspace ID"))
+	// 	return
+	// }
+	// projectId, err := strconv.Atoi(str)
 	workspaces, err := h.store.GetWorkspaces()
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")

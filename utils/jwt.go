@@ -33,9 +33,9 @@ const BEARER = "Bearer "
 
 func ValidateJWT(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		for key, values := range r.Header {
-			fmt.Printf("Headers: %s, Value: %v\n", key, values)
-		}
+		// for key, values := range r.Header {
+		// fmt.Printf("Headers: %s, Value: %v\n", key, values)
+		// }
 
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" || !strings.HasPrefix(authHeader, BEARER) {

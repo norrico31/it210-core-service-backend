@@ -23,6 +23,7 @@ func (h *Handler) handleGetPriorities(w http.ResponseWriter, r *http.Request) {
 	prioritys, err := h.store.GetPriorities()
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")

@@ -23,6 +23,7 @@ func (h *Handler) handleGetSegments(w http.ResponseWriter, r *http.Request) {
 	segments, err := h.store.GetSegments()
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
