@@ -16,7 +16,6 @@ func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
 }
 
-// TODO GET WITH ASSOCIATE
 func (s *Store) GetSegments() ([]entities.Segment, error) {
 	// Query segments and associated projects, including segments without projects
 	rows, err := s.db.Query(`
@@ -92,24 +91,69 @@ func (s *Store) GetSegments() ([]entities.Segment, error) {
 	return result, nil
 }
 
-// TODO: THIS MOTHER FUCKER
 func (s *Store) GetSegment(id int) (*entities.Segment, error) {
-	segment := entities.Segment{}
-	err := s.db.QueryRow("SELECT id, name, description, createdAt, updatedAt FROM segments WHERE deletedAt IS NULL AND id = $1", id).Scan(
-		&segment.ID,
-		&segment.Name,
-		&segment.Description,
-		&segment.CreatedAt,
-		&segment.UpdatedAt,
-	)
+	// Query segment and its associated projects
+	rows, err := s.db.Query(`
+		SELECT 
+			seg.id AS segment_id, 
+			seg.name AS segment_name, 
+			seg.description AS segment_description,
+			seg.createdAt AS segment_createdAt,
+			seg.updatedAt AS segment_updatedAt,
+			p.id AS project_id, 
+			p.name AS project_name, 
+			p.description AS project_description,
+			p.progress AS project_progress, 
+			p.url AS project_url, 
+			p.dateStarted AS project_dateStarted, 
+			p.dateDeadline AS project_dateDeadline, 
+			p.createdAt AS project_createdAt,
+			p.updatedAt AS project_updatedAt
+		FROM segments seg
+		LEFT JOIN segments_projects sp ON seg.id = sp.segmentId
+		LEFT JOIN projects p ON sp.projectId = p.id
+		WHERE seg.id = $1 AND seg.deletedAt IS NULL
+		ORDER BY p.createdAt DESC
+	`, id)
 	if err != nil {
-		return nil, fmt.Errorf("segment not found")
+		return nil, fmt.Errorf("failed to query segment and projects: %v", err)
+	}
+	defer rows.Close()
+
+	// Create a map to associate segment ID with the segment itself
+	segment := &entities.Segment{}
+	// Process each row
+	for rows.Next() {
+		var project entities.Project
+		var projectID sql.NullInt64
+
+		err := rows.Scan(
+			&segment.ID, &segment.Name, &segment.Description, &segment.CreatedAt, &segment.UpdatedAt,
+			&projectID, &project.Name, &project.Description, &project.Progress, &project.Url,
+			&project.DateStarted, &project.DateDeadline, &project.CreatedAt, &project.UpdatedAt,
+		)
+		if err != nil {
+			log.Printf("Failed to scan row: %v", err)
+			continue
+		}
+
+		// Only add the project if the project ID is not NULL
+		if projectID.Valid {
+			project.ID = int(projectID.Int64) // Convert int64 to int
+			segment.Projects = append(segment.Projects, project)
+		}
+	}
+
+	// Check for any row iteration errors
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate over rows: %v", err)
 	}
 
 	if segment.ID == 0 {
 		return nil, fmt.Errorf("segment not found")
 	}
-	return &segment, nil
+
+	return segment, nil
 }
 
 func (s *Store) CreateSegment(payload entities.SegmentPayload) (*entities.Segment, error) {
