@@ -42,7 +42,7 @@ func (h *Handler) handleGetProject(w http.ResponseWriter, r *http.Request) {
 	for header := range r.Header {
 		if header == "X-User-Id" {
 			userId := r.Header.Get("X-User-Id")
-			fmt.Printf("hala: %s \n", userId)
+			fmt.Printf("userid: %s \n", userId)
 		}
 	}
 	vars := mux.Vars(r)

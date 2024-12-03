@@ -26,7 +26,6 @@ type Project struct {
 	CreatedAt    time.Time  `json:"createdAt"`
 	UpdatedAt    time.Time  `json:"updatedAt"`
 	Users        []User     `json:"users"`
-	Tasks        []Task     `json:"tasks"`
 	DeletedBy    *int       `json:"deletedBy,omitempty"`
 	DeletedAt    *time.Time `json:"deletedAt,omitempty"`
 }

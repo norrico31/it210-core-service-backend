@@ -155,7 +155,6 @@ func SeedProjects(db *sql.DB) error {
 
 			// Insert project-user associations
 			for _, userId := range users {
-				// Ensure HALA message is printed even if no user associations occur
 				_, err = db.Exec(`
 				INSERT INTO users_projects (project_id, user_id) 
 				VALUES ($1, $2)
