@@ -67,11 +67,12 @@ func (h *Handler) handleCreateSegment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	segment, err := h.store.CreateSegment(entities.SegmentPayload{
+	payload = entities.SegmentPayload{
 		Name:        payload.Name,
 		Description: payload.Description,
 		ProjectIDs:  payload.ProjectIDs,
-	})
+	}
+	segment, err := h.store.CreateSegment(payload)
 
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, err)
@@ -108,10 +109,6 @@ func (h *Handler) handleUpdateSegment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if payload.Name != "" {
-		// if len(payload.Name) < 3 || len(payload.Name) > 50 {
-		// 	utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("name must be between 3 and 50 characters"))
-		// 	return
-		// }
 		segment.Name = payload.Name
 	}
 
@@ -119,10 +116,23 @@ func (h *Handler) handleUpdateSegment(w http.ResponseWriter, r *http.Request) {
 		segment.Description = payload.Description
 	}
 
+	var projectIds = []int{}
+
+	if payload.ProjectIDs != nil {
+		for _, id := range *payload.ProjectIDs {
+			projectIds = append(projectIds, id)
+		}
+	} else {
+		for _, projId := range segment.Projects {
+			projectIds = append(projectIds, projId.ID)
+		}
+	}
+
 	err = h.store.UpdateSegment(entities.SegmentPayload{
 		ID:          segment.ID,
 		Name:        segment.Name,
 		Description: segment.Description,
+		ProjectIDs:  &projectIds,
 	})
 
 	if err != nil {

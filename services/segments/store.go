@@ -214,19 +214,51 @@ func (s *Store) UpdateSegment(payload entities.SegmentPayload) error {
 		return err
 	}
 
+	// Step 1: Update the segment details in the 'segments' table
 	_, err = tx.Exec("UPDATE segments SET name = $1, description = $2, updatedAt = CURRENT_TIMESTAMP WHERE id = $3", payload.Name, payload.Description, payload.ID)
 	if err != nil {
+		// Rollback transaction if update fails
 		if rbErr := tx.Rollback(); rbErr != nil {
-			return fmt.Errorf("insert error: %v, rollback error: %v", err, rbErr)
+			return fmt.Errorf("update error: %v, rollback error: %v", err, rbErr)
 		}
 		return err
 	}
 
+	// Step 3: Insert the new associations (if any)
+	if len(*payload.ProjectIDs) > 0 {
+		// Step 2: Delete existing associations from 'segments_projects'
+		_, err = tx.Exec(`
+			DELETE FROM segments_projects WHERE segmentId = $1
+		`, payload.ID)
+		if err != nil {
+			// Rollback transaction if deleting associations fails
+			if rbErr := tx.Rollback(); rbErr != nil {
+				return fmt.Errorf("delete error: %v, rollback error: %v", err, rbErr)
+			}
+			return fmt.Errorf("failed to delete old project associations for segment %d: %v", payload.ID, err)
+		}
+
+		for _, projectID := range *payload.ProjectIDs {
+			_, err = tx.Exec(`
+				INSERT INTO segments_projects (segmentId, projectId)
+				VALUES ($1, $2)
+			`, payload.ID, projectID)
+			if err != nil {
+				// Rollback transaction if inserting new associations fails
+				if rbErr := tx.Rollback(); rbErr != nil {
+					return fmt.Errorf("insert association error: %v, rollback error: %v", err, rbErr)
+				}
+				return fmt.Errorf("failed to associate segment %d with project %d: %v", payload.ID, projectID, err)
+			}
+		}
+	}
+
+	// Step 4: Commit the transaction if everything went well
 	if err = tx.Commit(); err != nil {
 		return err
 	}
 
-	return err
+	return nil
 }
 
 func (s *Store) DeleteSegment(id int) error {
