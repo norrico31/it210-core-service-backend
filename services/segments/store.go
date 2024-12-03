@@ -163,21 +163,48 @@ func (s *Store) CreateSegment(payload entities.SegmentPayload) (*entities.Segmen
 		return nil, err
 	}
 
-	_, err = tx.Exec("INSERT INTO segments (name, description) VALUES ($1, $2)", payload.Name, payload.Description)
+	var segmentID int
+	err = tx.QueryRow(
+		"INSERT INTO segments (name, description) VALUES ($1, $2) RETURNING id",
+		payload.Name,
+		payload.Description,
+	).Scan(&segmentID)
 	if err != nil {
-		// If there's an error, rollback the transaction
+		// Rollback the transaction if the insert fails
 		if rbErr := tx.Rollback(); rbErr != nil {
 			return nil, fmt.Errorf("insert error: %v, rollback error: %v", err, rbErr)
 		}
 		return nil, err
 	}
 
-	// Commit the transaction if all went well
-	if err = tx.Commit(); err != nil {
-		return &entities.Segment{Name: payload.Name, Description: payload.Description}, err
+	if len(*payload.ProjectIDs) > 0 {
+		for _, projectID := range *payload.ProjectIDs {
+			_, err = tx.Exec(
+				"INSERT INTO segments_projects (segmentId, projectId) VALUES ($1, $2)",
+				segmentID,
+				projectID,
+			)
+			if err != nil {
+				// Rollback the transaction if association fails
+				if rbErr := tx.Rollback(); rbErr != nil {
+					return nil, fmt.Errorf("association error: %v, rollback error: %v", err, rbErr)
+				}
+				return nil, fmt.Errorf("failed to associate segment %d with project %d: %v", segmentID, projectID, err)
+			}
+		}
 	}
 
-	return &entities.Segment{Name: payload.Name, Description: payload.Description}, err
+	// Step 3: Commit the transaction if everything went well
+	if err = tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	// Return the created segment with the assigned ID
+	return &entities.Segment{
+		ID:          segmentID,
+		Name:        payload.Name,
+		Description: payload.Description,
+	}, nil
 }
 
 func (s *Store) UpdateSegment(payload entities.SegmentPayload) error {

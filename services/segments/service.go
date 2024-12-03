@@ -70,6 +70,7 @@ func (h *Handler) handleCreateSegment(w http.ResponseWriter, r *http.Request) {
 	segment, err := h.store.CreateSegment(entities.SegmentPayload{
 		Name:        payload.Name,
 		Description: payload.Description,
+		ProjectIDs:  payload.ProjectIDs,
 	})
 
 	if err != nil {

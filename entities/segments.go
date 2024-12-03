@@ -28,4 +28,5 @@ type SegmentPayload struct {
 	ID          int    `json:"id"`
 	Name        string `validate:"required,min=3,max=50"`
 	Description string `json:"description"`
+	ProjectIDs  *[]int `json:"projectIds"`
 }
