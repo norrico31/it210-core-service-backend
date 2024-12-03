@@ -66,7 +66,6 @@ func (h *Handler) handleGetProject(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJSON(w, http.StatusOK, proj)
 }
 
-// TODO
 func (h *Handler) handleProjectCreate(w http.ResponseWriter, r *http.Request) {
 	payload := entities.ProjectCreatePayload{}
 

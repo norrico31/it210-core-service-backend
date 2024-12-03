@@ -18,6 +18,7 @@ func NewStore(db *sql.DB) *Store {
 }
 
 func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
+	// TODO DISPLAY SEGMENT
 	query := `
 		SELECT
 			p.id AS project_id,
@@ -500,11 +501,25 @@ func (s *Store) ProjectCreate(payload entities.ProjectCreatePayload) (map[string
 	}
 
 	proj := entities.Project{}
-	err = tx.QueryRow("INSERT INTO projects (name, description, progress, dateStarted, dateDeadline) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, description, progress, dateStarted, dateDeadline, createdAt, updatedAt", payload.Name, payload.Description, progress, started, deadline).Scan(
+	err = tx.QueryRow("INSERT INTO projects (name, description, progress, url, statusId, segmentId, dateStarted, dateDeadline, createdAt, updatedAt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id, name, description, progress, url, statusId, segmentId, dateStarted, dateDeadline, createdAt, updatedAt",
+		payload.Name,
+		payload.Description,
+		progress,
+		payload.Url,
+		payload.StatusID,
+		payload.SegmentID,
+		started,
+		deadline,
+		time.Now(),
+		time.Now(),
+	).Scan(
 		&proj.ID,
 		&proj.Name,
 		&proj.Description,
 		&proj.Progress,
+		&proj.Url,
+		&proj.StatusID,
+		&proj.SegmentID,
 		&proj.DateStarted,
 		&proj.DateDeadline,
 		&proj.CreatedAt,
@@ -704,6 +719,8 @@ func buildProjectResponse(proj entities.Project) map[string]interface{} {
 		"name":         proj.Name,
 		"description":  proj.Description,
 		"progress":     proj.Progress,
+		"statusId":     proj.StatusID,
+		"segmentId":    proj.SegmentID,
 		"dateStarted":  formatDate(proj.DateStarted),
 		"dateDeadline": formatDate(proj.DateDeadline),
 		"createdAt":    proj.CreatedAt,

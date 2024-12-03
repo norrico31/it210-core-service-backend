@@ -16,7 +16,7 @@ type Project struct {
 	Name         string     `json:"name"`
 	Description  string     `json:"description"`
 	Progress     *float64   `json:"progress"`
-	Url          string     `json:"url"`
+	Url          *string    `json:"url"`
 	StatusID     int        `json:"statusId"`
 	Status       Status     `json:"status"`
 	SegmentID    int        `json:"segmentId"`
@@ -35,8 +35,11 @@ type ProjectCreatePayload struct {
 	Name         string   `json:"name"`
 	Description  string   `json:"description"`
 	Progress     *float64 `json:"progress"`
-	DateStarted  string   `json:"dateStarted"`  // ISO 8601 or user-provided format
-	DateDeadline string   `json:"dateDeadline"` // ISO 8601 or user-provided format
+	Url          *string  `json:"url"`
+	StatusID     int      `json:"statusId"`
+	SegmentID    int      `json:"segmentId"`
+	DateStarted  string   `json:"dateStarted"`
+	DateDeadline string   `json:"dateDeadline"`
 }
 
 type ProjectUpdatePayload struct {
@@ -44,6 +47,9 @@ type ProjectUpdatePayload struct {
 	Name         string   `json:"name"`
 	Description  string   `json:"description"`
 	Progress     *float64 `json:"progress"`
-	DateStarted  string   `json:"dateStarted"`  // ISO 8601 or user-provided format
-	DateDeadline string   `json:"dateDeadline"` // ISO 8601 or user-provided format
+	Url          *string  `json:"url"`
+	StatusID     int      `json:"statusId"`
+	SegmentID    int      `json:"segmentId"`
+	DateStarted  string   `json:"dateStarted"`
+	DateDeadline string   `json:"dateDeadline"`
 }

@@ -20,7 +20,7 @@ func (s *Store) GetTasks() ([]*entities.Task, error) {
 	// SQL query without subtasks
 	query := fmt.Sprintf(`
         SELECT 
-			t.id, t.title, t.description, t.userId, t.priorityId, t.workspaceId, t.taskOrder, t.createdAt, t.updatedAt, t.deletedAt, t.deletedBy,
+			t.id, t.title, t.description, t.userId, t.priorityId, t.workspaceId, t.taskOrder, t.createdAt, t.updatedAt, t.deletedAt, t.deletedBy
         FROM tasks t
     `)
 

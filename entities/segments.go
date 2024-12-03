@@ -17,6 +17,8 @@ type Segment struct {
 	ID          int        `json:"id"`
 	Name        string     `json:"name"`
 	Description string     `json:"description"`
+	ProjectID   *int       `json:"projectId"`
+	Projects    []Project  `json:"projects"`
 	CreatedAt   time.Time  `json:"createdAt"`
 	UpdatedAt   time.Time  `json:"updatedAt"`
 	DeletedAt   *time.Time `json:"deletedAt,omitempty"`
