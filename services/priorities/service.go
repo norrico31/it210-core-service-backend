@@ -158,7 +158,7 @@ func (h *Handler) handleDeletePriority(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.WriteJSON(w, http.StatusNoContent, map[string]interface{}{"msg": "Delete Priority Successfully!"})
+	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"msg": "Delete Priority Successfully!"})
 }
 
 func (h *Handler) handleRestorePriority(w http.ResponseWriter, r *http.Request) {
@@ -187,5 +187,5 @@ func (h *Handler) handleRestorePriority(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	utils.WriteJSON(w, http.StatusNoContent, nil)
+	utils.WriteJSON(w, http.StatusOK, nil)
 }

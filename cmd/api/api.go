@@ -12,6 +12,7 @@ import (
 	"github.com/norrico31/it210-core-service-backend/services/projects"
 	"github.com/norrico31/it210-core-service-backend/services/roles"
 	"github.com/norrico31/it210-core-service-backend/services/segments"
+	"github.com/norrico31/it210-core-service-backend/services/statuses"
 	"github.com/norrico31/it210-core-service-backend/services/tasks"
 	"github.com/norrico31/it210-core-service-backend/services/users"
 	"github.com/norrico31/it210-core-service-backend/services/workspaces"
@@ -58,6 +59,10 @@ func (s *APIServer) Run() {
 	roleStore := roles.NewStore(s.db)
 	roleHandler := roles.NewHandler(roleStore)
 	roles.RegisterRoutes(subrouterv1, roleHandler)
+
+	statusStore := statuses.NewStore(s.db)
+	statusHandler := statuses.NewHandler(statusStore)
+	statuses.RegisterRoutes(subrouterv1, statusHandler)
 
 	proprityStore := priorities.NewStore(s.db)
 	proprityHandler := priorities.NewHandler(proprityStore)

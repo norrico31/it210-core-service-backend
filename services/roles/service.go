@@ -159,7 +159,7 @@ func (h *Handler) handleDeleteRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.WriteJSON(w, http.StatusNoContent, map[string]interface{}{"msg": "Delete Role Successfully!"})
+	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"msg": "Delete Role Successfully!"})
 }
 
 func (h *Handler) handleRestoreRole(w http.ResponseWriter, r *http.Request) {
@@ -188,5 +188,5 @@ func (h *Handler) handleRestoreRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.WriteJSON(w, http.StatusNoContent, nil)
+	utils.WriteJSON(w, http.StatusOK, nil)
 }
