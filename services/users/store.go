@@ -504,8 +504,7 @@ func (s *Store) UpdateUser(userId int, user entities.UserUpdatePayload, projectI
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %v", err)
 	}
-	fmt.Printf("proejctIDS: %v", projectIDs)
-	// Update user
+
 	_, err = tx.Exec(`
 		UPDATE users
 		SET firstName = $1, lastName = $2, email = $3, roleId = $4, age = $5, password = $6, updatedAt = $7

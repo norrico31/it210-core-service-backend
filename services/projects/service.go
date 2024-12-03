@@ -110,26 +110,61 @@ func (h *Handler) handleProjectUpdate(w http.ResponseWriter, r *http.Request) {
 		utils.WriteError(w, http.StatusBadRequest, err)
 		return
 	}
+	existProj, err := h.store.GetProject(projectId)
 
-	updateProject := entities.ProjectUpdatePayload{
-		ID:           projectId,
-		Name:         payload.Name,
-		Description:  payload.Description,
-		Progress:     payload.Progress,
-		Url:          payload.Url,
-		SegmentID:    payload.SegmentID,
-		StatusID:     payload.StatusID,
-		DateStarted:  payload.DateStarted,
-		DateDeadline: payload.DateDeadline,
+	if payload.Name != "" {
+		existProj.Name = payload.Name
+	}
+	if payload.Description != "" {
+		existProj.Description = payload.Description
+	}
+	if payload.Progress != nil {
+		existProj.Progress = payload.Progress
+	}
+	if payload.DateStarted != "" {
+		dateStarted, err := normalizeDate(payload.DateStarted)
+		if err != nil {
+			utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid date format for Date Started"))
+			return
+		}
+		existProj.DateStarted = &dateStarted
+	}
+	if payload.DateDeadline != "" {
+		dateDeadline, err := normalizeDate(payload.DateDeadline)
+		if err != nil {
+			utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid date format for Date Deadline"))
+			return
+		}
+		existProj.DateDeadline = &dateDeadline
 	}
 
-	newProj, err := h.store.ProjectUpdate(updateProject)
+	if payload.Url != nil {
+		existProj.Url = payload.Url
+	}
+
+	// Ensure non-nullable fields are not nullified
+	if payload.StatusID != 0 {
+		existProj.StatusID = payload.StatusID
+	}
+	if payload.SegmentID != 0 {
+		existProj.SegmentID = payload.SegmentID
+	}
+	var userIDs []int
+	if payload.UserIDs != nil {
+		userIDs = *payload.UserIDs
+	} else {
+		for _, user := range existProj.Users {
+			userIDs = append(userIDs, user.ID)
+		}
+	}
+
+	err = h.store.ProjectUpdate(projectId, payload, userIDs)
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
 		return
 	}
 
-	utils.WriteJSON(w, http.StatusOK, newProj)
+	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"msg": "Update Successfully!"})
 }
 
 func (h *Handler) handleProjectDelete(w http.ResponseWriter, r *http.Request) {

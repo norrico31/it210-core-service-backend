@@ -394,105 +394,71 @@ func (s *Store) ProjectCreate(payload entities.ProjectCreatePayload) (map[string
 }
 
 // UPDATE PROJECT WITH USERS into users_projects
-func (s *Store) ProjectUpdate(payload entities.ProjectUpdatePayload) (map[string]interface{}, error) {
+func (s *Store) ProjectUpdate(projId int, payload entities.ProjectUpdatePayload, userIDs []int) error {
 	tx, err := s.db.Begin()
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("failed to begin transaction: %v", err)
 	}
 
-	// Fetch the existing project
-	query := `
-		SELECT id, name, description, progress, url, dateStarted, dateDeadline, statusId, segmentId, createdAt, updatedAt
-		FROM projects
-		WHERE id = $1`
-	rows, err := s.db.Query(query, payload.ID)
-	if err != nil {
-		return nil, fmt.Errorf("error fetching project: %v", err)
-	}
-	defer rows.Close()
-
-	existProj := entities.Project{}
-	if rows.Next() {
-		err := rows.Scan(
-			&existProj.ID, &existProj.Name, &existProj.Description, &existProj.Progress, &existProj.Url,
-			&existProj.DateStarted, &existProj.DateDeadline, &existProj.StatusID, &existProj.SegmentID,
-			&existProj.CreatedAt, &existProj.UpdatedAt,
-		)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Update project fields based on the payload
-	if payload.Name != "" {
-		existProj.Name = payload.Name
-	}
-	if payload.Description != "" {
-		existProj.Description = payload.Description
-	}
-	if payload.Progress != nil {
-		existProj.Progress = payload.Progress
-	}
+	// Normalize the DateStarted and DateDeadline if they are not empty
+	var dateStarted, dateDeadline *string
 	if payload.DateStarted != "" {
-		dateStarted, err := normalizeDate(payload.DateStarted)
-		if err != nil {
-			return nil, fmt.Errorf("invalid date format for DateStarted: %v", err)
-		}
-		existProj.DateStarted = &dateStarted
+		dateStarted = &payload.DateStarted
 	}
 	if payload.DateDeadline != "" {
-		dateDeadline, err := normalizeDate(payload.DateDeadline)
-		if err != nil {
-			return nil, fmt.Errorf("invalid date format for DateDeadline: %v", err)
-		}
-		existProj.DateDeadline = &dateDeadline
-	}
-
-	if payload.Url != nil {
-		existProj.Url = payload.Url
-	}
-
-	// Ensure non-nullable fields are not nullified
-	if payload.StatusID != 0 {
-		existProj.StatusID = payload.StatusID
-	}
-	if payload.SegmentID != 0 {
-		existProj.SegmentID = payload.SegmentID
+		dateDeadline = &payload.DateDeadline
 	}
 
 	updateQuery := `
 		UPDATE projects
-		SET name = $1, description = $2, progress = $3, url = $4, dateStarted = $5, dateDeadline = $6, statusId = $7, segmentId = $8, updatedAt = CURRENT_TIMESTAMP
-		WHERE id = $9
+		SET name = $1, description = $2, progress = $3, url = $4, dateStarted = $5, dateDeadline = $6, statusId = $7, segmentId = $8, updatedAt = $9
+		WHERE id = $10
 		RETURNING id, name, description, progress, url, dateStarted, dateDeadline, statusId, segmentId, createdAt, updatedAt`
-	proj := entities.Project{}
-	err = tx.QueryRow(updateQuery,
-		existProj.Name,
-		existProj.Description,
-		existProj.Progress,
-		existProj.Url,
-		existProj.DateStarted,
-		existProj.DateDeadline,
-		existProj.StatusID,
-		existProj.SegmentID,
-		existProj.ID,
-	).Scan(
-		&proj.ID, &proj.Name, &proj.Description, &proj.Progress, &proj.Url,
-		&proj.DateStarted, &proj.DateDeadline, &proj.StatusID, &proj.SegmentID,
-		&proj.CreatedAt, &proj.UpdatedAt,
+	_, err = tx.Exec(updateQuery,
+		payload.Name,
+		payload.Description,
+		payload.Progress,
+		payload.Url,
+		dateStarted,
+		dateDeadline,
+		payload.StatusID,
+		payload.SegmentID,
+		time.Now(),
+		projId,
 	)
 
 	if err != nil {
 		tx.Rollback()
-		return nil, fmt.Errorf("update error: %v", err)
+		return fmt.Errorf("update error: %v", err)
 	}
 
+	// Delete old user-project associations
+	_, err = tx.Exec(`
+		DELETE FROM users_projects WHERE project_id = $1
+	`, projId)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to delete old user-project associations: %v", err)
+	}
+
+	// Insert new user-project associations
+	for _, userID := range userIDs {
+		_, err = tx.Exec(`
+			INSERT INTO users_projects (user_id, project_id)
+			VALUES ($1, $2)
+		`, userID, projId)
+		if err != nil {
+			tx.Rollback()
+			return fmt.Errorf("failed to associate user with project %d: %v", projId, err)
+		}
+	}
+
+	// Commit the transaction
 	if err = tx.Commit(); err != nil {
-		return nil, err
+		return fmt.Errorf("failed to commit transaction: %v", err)
 	}
 
-	// Build and return the response
-	return buildProjectResponse(proj), nil
+	return nil
 }
 
 func (s *Store) ProjectDelete(id int) (*entities.Project, error) {

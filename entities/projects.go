@@ -6,7 +6,7 @@ type ProjectStore interface {
 	GetProjects(string) ([]*Project, error)
 	GetProject(int) (*Project, error)
 	ProjectCreate(ProjectCreatePayload) (map[string]interface{}, error)
-	ProjectUpdate(ProjectUpdatePayload) (map[string]interface{}, error)
+	ProjectUpdate(int, ProjectUpdatePayload, []int) error
 	ProjectDelete(int) (*Project, error)
 	ProjectRestore(int) (*Project, error)
 }
@@ -39,6 +39,7 @@ type ProjectCreatePayload struct {
 	SegmentID    int      `json:"segmentId"`
 	DateStarted  string   `json:"dateStarted"`
 	DateDeadline string   `json:"dateDeadline"`
+	UserIDs      *[]int   `json:"userIds"`
 }
 
 type ProjectUpdatePayload struct {
@@ -51,4 +52,5 @@ type ProjectUpdatePayload struct {
 	SegmentID    int      `json:"segmentId"`
 	DateStarted  string   `json:"dateStarted"`
 	DateDeadline string   `json:"dateDeadline"`
+	UserIDs      *[]int   `json:"userIds"`
 }
