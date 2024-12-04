@@ -119,54 +119,48 @@ func (s *Store) GetTask(id int) (*entities.Task, error) {
 func (s *Store) TaskCreate(payload entities.TaskCreatePayload) (*entities.Task, error) {
 	tx, err := s.db.Begin()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-
-	// If the userId is not null (not 0), ensure it exists in the users table.
-	if payload.UserID != 0 {
-		var count int
-		err := tx.QueryRow("SELECT COUNT(1) FROM users WHERE id = $1", payload.UserID).Scan(&count)
-		if err != nil {
+	defer func() {
+		if p := recover(); p != nil {
 			tx.Rollback()
-			return nil, fmt.Errorf("error checking user existence: %v", err)
-		}
-		if count == 0 {
+			panic(p)
+		} else if err != nil {
 			tx.Rollback()
-			return nil, fmt.Errorf("user with ID %d does not exist", payload.UserID)
 		}
-	}
+	}()
 
-	// Insert the new task into the database.
 	task := entities.Task{}
-	err = tx.QueryRow(`
-		INSERT INTO tasks (title, description, statusId, userId) 
-		VALUES ($1, $2, $3, $4, $5) 
-		RETURNING id, title, description, statusId, userId, createdAt, updatedAt`,
+	query := `
+		INSERT INTO tasks (title, description, userId, priorityId, workspaceId, taskOrder)
+		VALUES ($1, $2, $3, $4, $5, NULL)
+		RETURNING id, title, description, userId, priorityId, workspaceId, taskOrder, createdAt, updatedAt
+	`
+	err = tx.QueryRow(
+		query,
 		payload.Title,
 		payload.Description,
-		func() interface{} { // Handle optional userId
-			if payload.UserID == 0 {
-				return nil
-			}
-			return payload.UserID
-		}(),
-		// payload.ProjectID,
+		sql.NullInt64{Int64: int64(payload.UserID), Valid: payload.UserID != 0},
+		payload.PriorityID,
+		payload.WorkspaceID,
 	).Scan(
 		&task.ID,
 		&task.Title,
 		&task.Description,
 		&task.UserID,
-		// &task.ProjectID,
+		&task.PriorityID,
+		&task.WorkspaceID,
+		&task.TaskOrder,
 		&task.CreatedAt,
 		&task.UpdatedAt,
 	)
 	if err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("insert error: %v", err)
+		return nil, fmt.Errorf("failed to insert task: %w", err)
 	}
 
+	// Commit transaction
 	if err = tx.Commit(); err != nil {
-		return nil, fmt.Errorf("commit error: %v", err)
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return &task, nil

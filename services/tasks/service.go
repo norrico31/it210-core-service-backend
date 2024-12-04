@@ -80,6 +80,21 @@ func (h *Handler) handleTaskCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(payload.Title) <= 2 {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("title must be atleast 3 characters"))
+		return
+	}
+
+	if payload.PriorityID == 0 {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing priority ID"))
+		return
+	}
+
+	if payload.WorkspaceID == 0 {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing workspace ID"))
+		return
+	}
+
 	task, err := h.store.TaskCreate(payload)
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
