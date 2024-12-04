@@ -180,13 +180,7 @@ func (h *Handler) handleTaskDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existTask, err := h.store.GetTask(taskId)
-	if err != nil {
-		utils.WriteError(w, http.StatusNotFound, err)
-		return
-	}
-
-	task, err := h.store.TaskDelete(existTask.ID)
+	task, err := h.store.TaskDelete(taskId)
 
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)

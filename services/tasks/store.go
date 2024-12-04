@@ -198,36 +198,26 @@ func (s *Store) TaskUpdate(payload entities.TaskUpdatePayload) error {
 	return nil
 }
 
-func (s *Store) TaskDelete(id int) (*entities.Task, error) {
+func (s *Store) TaskDelete(id int) error {
 	tx, err := s.db.Begin()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	task := &entities.Task{}
-	err = tx.QueryRow("UPDATE tasks SET deletedAt = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id, title, description, userId, createdAt, updatedAt, deletedAt", id).Scan(
-		&task.ID,
-		&task.Title,
-		&task.Description,
-		&task.UserID,
-		// &task.ProjectID,
-		&task.CreatedAt,
-		&task.UpdatedAt,
-		&task.DeletedAt,
-	)
+	_, err = tx.Exec("UPDATE tasks SET deletedAt = CURRENT_TIMESTAMP WHERE id = $1", id)
 	if err != nil {
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			return nil, fmt.Errorf("error deleting : %v, rollback error: %v", err, rollbackErr)
+			return fmt.Errorf("error deleting : %v, rollback error: %v", err, rollbackErr)
 		}
 
-		return nil, err
+		return nil
 	}
 
 	if err = tx.Commit(); err != nil {
-		return nil, err
+		return nil
 	}
 
-	return task, nil
+	return nil
 }
 
 func (s *Store) TaskRestore(id int) (*entities.Task, error) {
@@ -241,7 +231,6 @@ func (s *Store) TaskRestore(id int) (*entities.Task, error) {
 		&task.Title,
 		&task.Description,
 		&task.UserID,
-		// &task.ProjectID,
 		&task.CreatedAt,
 		&task.UpdatedAt,
 		&task.DeletedAt,

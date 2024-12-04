@@ -127,7 +127,8 @@ func (s *Store) GetWorkspace(projectId int) ([]entities.Workspace, error) {
 			priorityId AS task_priority_id,
 			taskOrder AS task_order,
 			createdAt AS task_createdAt,
-			updatedAt AS task_updatedAt
+			updatedAt AS task_updatedAt,
+			deletedAt task_deletedAt
 		FROM tasks
 		WHERE workspaceId = ANY($1) AND deletedAt IS NULL;
 	`
@@ -155,6 +156,7 @@ func (s *Store) GetWorkspace(projectId int) ([]entities.Workspace, error) {
 			&task.TaskOrder,
 			&task.CreatedAt,
 			&task.UpdatedAt,
+			&task.DeletedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan task data: %w", err)
