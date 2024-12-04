@@ -106,6 +106,63 @@ func (h *Handler) handleTaskCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) handleTaskUpdate(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	str, ok := vars["taskId"]
+	if !ok {
+		utils.WriteError(w, http.StatusNotFound, fmt.Errorf("invalid task ID"))
+		return
+	}
+
+	taskId, err := strconv.Atoi(str)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid task ID"))
+		return
+	}
+
+	payload := entities.TaskUpdatePayload{}
+	if err := utils.ParseJSON(r, &payload); err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	if err := utils.Validate.Struct(payload); err != nil {
+		errs := err.(validator.ValidationErrors)
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload %v", errs))
+		return
+	}
+
+	existTask, err := h.store.GetTask(taskId)
+	if err != nil {
+		utils.WriteError(w, http.StatusNotFound, err)
+		return
+	}
+
+	if len(payload.Title) == 0 {
+		payload.Title = existTask.Title
+	}
+
+	if payload.Description == "" {
+		payload.Description = existTask.Description
+	}
+	if payload.UserID == 0 {
+		payload.UserID = *existTask.UserID
+	}
+
+	if payload.PriorityID == 0 {
+		payload.PriorityID = existTask.PriorityID
+	}
+
+	if payload.WorkspaceID == 0 {
+		payload.WorkspaceID = existTask.WorkspaceID
+	}
+	payload.ID = existTask.ID
+
+	err = h.store.TaskUpdate(payload)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"msg": "Update Task Successfully"})
 
 }
 

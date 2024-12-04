@@ -8,7 +8,7 @@ type TaskStore interface {
 	GetTasks() ([]*Task, error)
 	GetTask(int) (*Task, error)
 	TaskCreate(TaskCreatePayload) (*Task, error)
-	TaskUpdate(TaskUpdatePayload) (*Task, error)
+	TaskUpdate(TaskUpdatePayload) error
 	TaskDelete(int) (*Task, error)
 	TaskRestore(int) (*Task, error)
 }
@@ -39,7 +39,7 @@ type TaskCreatePayload struct {
 }
 
 type TaskUpdatePayload struct {
-	ID          string `json:"id"`
+	ID          int    `json:"id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	PriorityID  int    `json:"priorityId"`

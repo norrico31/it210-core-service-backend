@@ -166,8 +166,36 @@ func (s *Store) TaskCreate(payload entities.TaskCreatePayload) (*entities.Task, 
 	return &task, nil
 }
 
-func (s *Store) TaskUpdate(payload entities.TaskUpdatePayload) (*entities.Task, error) {
-	return nil, nil
+func (s *Store) TaskUpdate(payload entities.TaskUpdatePayload) error {
+	tx, err := s.db.Begin()
+
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("payload: ", payload.ID)
+	fmt.Println("payload: ", payload.PriorityID)
+	fmt.Println("payload: ", payload.UserID)
+	fmt.Println("payload: ", payload.WorkspaceID)
+	_, err = tx.Exec(`UPDATE tasks SET title = $1, description = $2, userId = $3, priorityId = $4, workspaceId = $5, updatedAt = CURRENT_TIMESTAMP WHERE id = $6`,
+		payload.Title,
+		payload.Description,
+		payload.UserID,
+		payload.PriorityID,
+		payload.WorkspaceID,
+		payload.ID,
+	)
+	if err != nil {
+		if rbErr := tx.Rollback(); rbErr != nil {
+			return fmt.Errorf("insert error: %v, rollback error: %v", err, rbErr)
+		}
+		return err
+	}
+
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *Store) TaskDelete(id int) (*entities.Task, error) {
