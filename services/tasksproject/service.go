@@ -67,6 +67,50 @@ func (h *Handler) handleGetTaskProject(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"data": tasksProject})
 }
 
+func (h *Handler) handleTasksProjectCreate(w http.ResponseWriter, r *http.Request) {
+	payload := entities.TasksProjectCreatePayload{}
+
+	if err := utils.ParseJSON(r, &payload); err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	if err := utils.Validate.Struct(payload); err != nil {
+		errs := err.(validator.ValidationErrors)
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload %v", errs))
+		return
+	}
+
+	if len(payload.Name) <= 2 {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("title must be atleast 3 characters"))
+		return
+	}
+
+	if payload.PriorityID == 0 {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing priority ID"))
+		return
+	}
+
+	if payload.UserID == 0 {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing user ID"))
+		return
+	}
+
+	if payload.ProjectID == 0 {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing project ID"))
+		return
+	}
+
+	task, err := h.store.TasksProjectCreate(payload)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"data": task})
+
+}
+
 func (h *Handler) handleGetDeletedTasksProject(w http.ResponseWriter, r *http.Request) {
 	// tasksProject, err := h.store.GetTasksProject()
 	// if err != nil {
@@ -102,40 +146,6 @@ func (h *Handler) handleGetDeletedTasksProject(w http.ResponseWriter, r *http.Re
 // 	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"data": task})
 
 // }
-
-func (h *Handler) handleTasksProjectCreate(w http.ResponseWriter, r *http.Request) {
-	payload := entities.TasksProjectCreatePayload{}
-
-	if err := utils.ParseJSON(r, &payload); err != nil {
-		utils.WriteError(w, http.StatusBadRequest, err)
-		return
-	}
-
-	if err := utils.Validate.Struct(payload); err != nil {
-		errs := err.(validator.ValidationErrors)
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload %v", errs))
-		return
-	}
-
-	if len(payload.Name) <= 2 {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("title must be atleast 3 characters"))
-		return
-	}
-
-	if payload.PriorityID == 0 {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing priority ID"))
-		return
-	}
-
-	task, err := h.store.TasksProjectCreate(payload)
-	if err != nil {
-		utils.WriteError(w, http.StatusBadRequest, err)
-		return
-	}
-
-	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"data": task})
-
-}
 
 func (h *Handler) handleTasksProjectUpdate(w http.ResponseWriter, r *http.Request) {
 	// vars := mux.Vars(r)

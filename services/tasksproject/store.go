@@ -188,16 +188,19 @@ func (s *Store) TasksProjectCreate(payload entities.TasksProjectCreatePayload) (
 
 	tasksProject := entities.TasksProject{}
 	query := `
-		INSERT INTO tasks (name, description, userId, priorityId, workspaceId, taskOrder)
-		VALUES ($1, $2, $3, $4, $5, NULL)
-		RETURNING id, name, description, userId, priorityId, workspaceId, taskOrder, createdAt, updatedAt
+		INSERT INTO project_tasks (name, description, userId, priorityId, projectId, createdAt, updatedAt)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id, name, description, userId, priorityId, createdAt, updatedAt
 	`
 	err = tx.QueryRow(
 		query,
 		payload.Name,
 		payload.Description,
-		sql.NullInt64{Int64: int64(payload.UserID), Valid: payload.UserID != 0},
+		payload.UserID,
 		payload.PriorityID,
+		payload.ProjectID,
+		time.Now(),
+		time.Now(),
 	).Scan(
 		&tasksProject.ID,
 		&tasksProject.Name,
