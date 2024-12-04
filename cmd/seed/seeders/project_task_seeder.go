@@ -72,7 +72,7 @@ func SeedProjectTasks(db *sql.DB) error {
 	proj124 := projects["Project 124 Interpreter"]
 	proj210 := projects["Project 210 Web App DOSTV"]
 
-	tasks := []entities.ProjectTasks{
+	tasks := []entities.TasksProject{
 		{
 			Name:        "Task 1 for project interpreter",
 			Description: "description for task 1",

@@ -18,8 +18,9 @@ COPY . .
 RUN go mod tidy
 
 # Build the Go applications
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/migrate ./cmd/migrate/main.go
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/seed ./cmd/seed/main.go
+
+# RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/migrate ./cmd/migrate/main.go
+# RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/seed ./cmd/seed/main.go
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/core-service ./cmd/main.go
 
 # Use a lightweight image for the final stage
@@ -32,14 +33,15 @@ WORKDIR /app/core-service
 
 # Copy the binaries from the builder stage
 COPY --from=builder /app/core-service /app/core-service/
-COPY --from=builder /app/migrate /app/core-service/migrate
-COPY --from=builder /app/seed /app/core-service/seed
+# COPY --from=builder /app/migrate /app/core-service/migrate
+# COPY --from=builder /app/seed /app/core-service/seed
 COPY entrypoint.sh /app/core-service/
 
 # Copy the migration SQL files
-COPY --from=builder /app/cmd/migrate/migrations /app/core-service/cmd/migrate/migrations
+# COPY --from=builder /app/cmd/migrate/migrations /app/core-service/cmd/migrate/migrations
 
-RUN chmod +x /app/core-service/entrypoint.sh /app/core-service/migrate /app/core-service/seed /app/core-service/core-service
+# RUN chmod +x /app/core-service/entrypoint.sh /app/core-service/migrate /app/core-service/seed /app/core-service/core-service
+RUN chmod +x /app/core-service/entrypoint.sh /app/core-service/core-service
 
 EXPOSE 80 8080
 
