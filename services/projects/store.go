@@ -17,9 +17,7 @@ func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
 }
 
-// why index 1 has duplicated users? (EDIT projectId 1 for user ids)
 func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
-	print("hala?")
 	query := `
 		SELECT
 			p.id AS project_id,
@@ -69,9 +67,6 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 			statuses stat ON stat.id = p.statusId
 	`
 
-	// seg.id segment_id,
-	// seg.name segment_name,
-	// seg.description segment_description,
 	rows, err := s.db.Query(query)
 	if err != nil {
 		return nil, err
@@ -331,7 +326,6 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 	return &project, nil
 }
 
-// CREATE PROJECT WITH USERS into users_projects
 func (s *Store) ProjectCreate(payload entities.ProjectCreatePayload) (map[string]interface{}, error) {
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -359,7 +353,6 @@ func (s *Store) ProjectCreate(payload entities.ProjectCreatePayload) (map[string
 		deadline = &dateDeadline
 	}
 
-	// APPLY THE (USER IDS to users_projects) and the (segments_projects)
 	proj := entities.Project{}
 	err = tx.QueryRow(`
 		INSERT INTO projects (name, description, progress, url, statusId, dateStarted, dateDeadline, createdAt, updatedAt)
@@ -387,21 +380,16 @@ func (s *Store) ProjectCreate(payload entities.ProjectCreatePayload) (map[string
 		&proj.UpdatedAt,
 	)
 
-	// Check for errors after running the query
 	if err != nil {
 		tx.Rollback()
 		return nil, fmt.Errorf("failed to create project: %v", err)
 	}
 
-	// Check if the project ID is valid
 	if proj.ID == 0 {
 		tx.Rollback()
 		return nil, fmt.Errorf("failed to create project, project ID is invalid")
 	}
 
-	// Log the project ID after creation
-
-	// Associate users with the project if UserIDs are provided
 	if len(*payload.UserIDs) > 0 {
 		for _, userID := range *payload.UserIDs {
 			_, err = tx.Exec(`
@@ -426,7 +414,6 @@ func (s *Store) ProjectCreate(payload entities.ProjectCreatePayload) (map[string
 		}
 	}
 
-	// Handle rollback if there is any error during the process
 	if err != nil {
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
 			return nil, fmt.Errorf("insert error: %v, rollback error: %v", err, rollbackErr)
@@ -434,23 +421,19 @@ func (s *Store) ProjectCreate(payload entities.ProjectCreatePayload) (map[string
 		return nil, err
 	}
 
-	// Commit the transaction if everything went well
 	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
 
-	// Return the project response
 	return buildProjectResponse(proj), nil
 }
 
-// UPDATE INPUTS IF HAS PAYLOAD OTHERWISE RETAIN EXISTING
 func (s *Store) ProjectUpdate(projId int, payload entities.ProjectUpdatePayload, userIDs []int) error {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %v", err)
 	}
 
-	// Normalize the DateStarted and DateDeadline if they are not empty
 	var dateStarted, dateDeadline *string
 	if payload.DateStarted != "" {
 		dateStarted = &payload.DateStarted
@@ -459,7 +442,6 @@ func (s *Store) ProjectUpdate(projId int, payload entities.ProjectUpdatePayload,
 		dateDeadline = &payload.DateDeadline
 	}
 
-	// Update project details
 	updateQuery := `
 		UPDATE projects
 		SET name = $1, description = $2, progress = $3, url = $4, dateStarted = $5, dateDeadline = $6, statusId = $7, updatedAt = $8
@@ -477,13 +459,11 @@ func (s *Store) ProjectUpdate(projId int, payload entities.ProjectUpdatePayload,
 		projId,
 	)
 
-	// Check if error occurred during project update
 	if err != nil {
 		tx.Rollback()
 		return fmt.Errorf("update error: %v", err)
 	}
 
-	// Delete old segment associations
 	deleteQuery := `DELETE FROM segments_projects WHERE projectId = $1 RETURNING projectId, segmentId`
 	rows, err := tx.Query(deleteQuery, projId)
 	if err != nil {
@@ -492,7 +472,6 @@ func (s *Store) ProjectUpdate(projId int, payload entities.ProjectUpdatePayload,
 	}
 	defer rows.Close()
 
-	// Debug: print the deleted rows
 	for rows.Next() {
 		var projectId, segmentId int
 		if err := rows.Scan(&projectId, &segmentId); err != nil {
@@ -519,7 +498,6 @@ func (s *Store) ProjectUpdate(projId int, payload entities.ProjectUpdatePayload,
 		return fmt.Errorf("failed to delete old user-project associations: %v", err)
 	}
 
-	// Insert new user-project associations
 	for _, userID := range userIDs {
 		_, err = tx.Exec(`
 			INSERT INTO users_projects (user_id, project_id)
@@ -531,7 +509,6 @@ func (s *Store) ProjectUpdate(projId int, payload entities.ProjectUpdatePayload,
 		}
 	}
 
-	// Commit the transaction
 	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("failed to commit transaction: %v", err)
 	}
