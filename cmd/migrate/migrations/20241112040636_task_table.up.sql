@@ -5,7 +5,6 @@ CREATE TABLE IF NOT EXISTS tasks (
     description TEXT,
     userId INT REFERENCES users(id) ON DELETE
     SET NULL,
-        -- projectId INT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
         priorityId INT NOT NULL REFERENCES priorities(id) ON DELETE CASCADE,
         workspaceId INT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
         taskOrder INT,

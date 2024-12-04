@@ -6,7 +6,7 @@ import (
 
 type WorkspaceStore interface {
 	GetWorkspaces() ([]Workspace, error)
-	GetWorkspace(int) (*Workspace, error)
+	GetWorkspace(int) ([]Workspace, error)
 	CreateWorkspace(WorkspacePayload) (*Workspace, error)
 	UpdateWorkspace(WorkspacePayload) error
 	DeleteWorkspace(int) error
@@ -32,6 +32,7 @@ type WorkspacePayload struct {
 	Name        string `validate:"required,min=3,max=50"`
 	Description string `json:"description"`
 	ProjectID   int    `json:"projectId"`
+	ColOrder    int    // Optional
 }
 
 // TODO DRAGNDROP for colOrder

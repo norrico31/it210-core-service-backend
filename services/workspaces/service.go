@@ -41,19 +41,18 @@ func (h *Handler) handleGetWorkspaces(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleGetWorkspace(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	str, ok := vars["workspaceId"]
-
+	str, ok := vars["projectId"]
 	if !ok {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing workspace ID"))
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing project ID"))
 		return
 	}
-	workspaceId, err := strconv.Atoi(str)
+	projectId, err := strconv.Atoi(str)
 	if err != nil {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid workspace ID"))
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid project ID"))
 		return
 	}
 
-	workspace, err := h.store.GetWorkspace(workspaceId)
+	workspace, err := h.store.GetWorkspace(projectId)
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
 		return
@@ -75,10 +74,7 @@ func (h *Handler) handleCreateWorkspace(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	workspace, err := h.store.CreateWorkspace(entities.WorkspacePayload{
-		Name:        payload.Name,
-		Description: payload.Description,
-	})
+	workspace, err := h.store.CreateWorkspace(payload)
 
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, err)
@@ -108,25 +104,8 @@ func (h *Handler) handleUpdateWorkspace(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	workspace, err := h.store.GetWorkspace(workspaceId)
-	if err != nil {
-		utils.WriteError(w, http.StatusBadRequest, err)
-		return
-	}
-
-	if payload.Name != "" {
-		workspace.Name = payload.Name
-	}
-
-	if payload.Description != "" {
-		workspace.Description = payload.Description
-	}
-
-	err = h.store.UpdateWorkspace(entities.WorkspacePayload{
-		ID:          workspace.ID,
-		Name:        workspace.Name,
-		Description: workspace.Description,
-	})
+	payload.ID = workspaceId
+	err = h.store.UpdateWorkspace(payload)
 
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, err)
@@ -137,59 +116,59 @@ func (h *Handler) handleUpdateWorkspace(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *Handler) handleDeleteWorkspace(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	str, ok := vars["workspaceId"]
-	if !ok {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing workspace ID"))
-		return
-	}
+	// vars := mux.Vars(r)
+	// str, ok := vars["workspaceId"]
+	// if !ok {
+	// 	utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing workspace ID"))
+	// 	return
+	// }
 
-	workspaceId, err := strconv.Atoi(str)
-	if err != nil {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid user ID"))
-		return
-	}
+	// workspaceId, err := strconv.Atoi(str)
+	// if err != nil {
+	// 	utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid user ID"))
+	// 	return
+	// }
 
-	existingWorkspace, err := h.store.GetWorkspace(workspaceId)
-	if err != nil {
-		utils.WriteError(w, http.StatusBadRequest, err)
-		return
-	}
+	// existingWorkspace, err := h.store.GetWorkspace(workspaceId)
+	// if err != nil {
+	// 	utils.WriteError(w, http.StatusBadRequest, err)
+	// 	return
+	// }
 
-	err = h.store.DeleteWorkspace(existingWorkspace.ID)
-	if err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, err)
-		return
-	}
+	// err = h.store.DeleteWorkspace(existingWorkspace.ID)
+	// if err != nil {
+	// 	utils.WriteError(w, http.StatusInternalServerError, err)
+	// 	return
+	// }
 
-	utils.WriteJSON(w, http.StatusNoContent, map[string]interface{}{"msg": "Delete Workspace Successfully!"})
+	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"msg": "Delete Workspace Successfully!"})
 }
 
 func (h *Handler) handleRestoreWorkspace(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	str, ok := vars["workspaceId"]
-	if !ok {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing workspace ID"))
-		return
-	}
+	// vars := mux.Vars(r)
+	// str, ok := vars["workspaceId"]
+	// if !ok {
+	// 	utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing workspace ID"))
+	// 	return
+	// }
 
-	workspaceId, err := strconv.Atoi(str)
-	if err != nil {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid user ID"))
-		return
-	}
+	// workspaceId, err := strconv.Atoi(str)
+	// if err != nil {
+	// 	utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid user ID"))
+	// 	return
+	// }
 
-	existingWorkspace, err := h.store.GetWorkspace(workspaceId)
-	if err != nil {
-		utils.WriteError(w, http.StatusBadRequest, err)
-		return
-	}
+	// existingWorkspace, err := h.store.GetWorkspace(workspaceId)
+	// if err != nil {
+	// 	utils.WriteError(w, http.StatusBadRequest, err)
+	// 	return
+	// }
 
-	err = h.store.RestoreWorkspace(existingWorkspace.ID)
-	if err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, err)
-		return
-	}
+	// err = h.store.RestoreWorkspace(existingWorkspace.ID)
+	// if err != nil {
+	// 	utils.WriteError(w, http.StatusInternalServerError, err)
+	// 	return
+	// }
 
-	utils.WriteJSON(w, http.StatusNoContent, nil)
+	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"msg": "Restore Workspace Successfully!"})
 }

@@ -443,7 +443,7 @@ func (s *Store) ProjectCreate(payload entities.ProjectCreatePayload) (map[string
 	return buildProjectResponse(proj), nil
 }
 
-// UPDATE PROJECT WITH USERS into users_projects
+// UPDATE INPUTS IF HAS PAYLOAD OTHERWISE RETAIN EXISTING
 func (s *Store) ProjectUpdate(projId int, payload entities.ProjectUpdatePayload, userIDs []int) error {
 	tx, err := s.db.Begin()
 	if err != nil {

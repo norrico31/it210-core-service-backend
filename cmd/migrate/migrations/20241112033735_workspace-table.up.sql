@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS workspaces (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    projectId INT REFERENCES projects(id),
+    projectId INT NOT NULL REFERENCES projects(id),
     colOrder INT,
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

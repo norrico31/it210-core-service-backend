@@ -541,7 +541,6 @@ func (s *Store) UpdateUser(userId int, user entities.UserUpdatePayload, projectI
 		}
 	}
 
-	// TODO: EXTREME HEADACHE
 	//* OPTION A
 	// CHECK IF INPUT PROJECT EXIST IN USERS AND GET IT TO SET THE deletedAt to null
 	// IF PROJECT DOESNS'T EXIST INSERT THE NEW PROJECTS in users_projects

@@ -3,7 +3,9 @@ package workspaces
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
+	"github.com/lib/pq"
 	"github.com/norrico31/it210-core-service-backend/entities"
 )
 
@@ -60,97 +62,34 @@ func (s *Store) GetWorkspaces() ([]entities.Workspace, error) {
 	return workspaces, nil
 }
 
-// func (s *Store) GetWorkspaces(projectId int) ([]entities.Workspace, error) {
-// 	println("ProjectId: %s", projectId)
-// 	query := `
-// 		SELECT
-// 			w.id, w.name, w.description, w.projectId, w.createdAt, w.updatedAt,
-// 			p.id AS project_id, p.name AS project_name, p.description AS project_description,
-// 			p.progress AS project_progress, p.dateStarted AS project_date_started, p.dateDeadline AS project_date_deadline,
-// 			t.id AS task_id, t.title AS task_title, t.description AS task_description,
-// 			t.userId AS task_user_id, t.priorityId AS task_priority_id,
-// 			t.taskOrder AS task_order, t.createdAt AS task_created_at
-// 		FROM workspaces w
-// 		LEFT JOIN projects p ON p.id = w.projectId
-// 		LEFT JOIN tasks t ON t.workspaceId = w.id
-// 		WHERE w.deletedAt IS NULL AND w.projectId = $1
-// 		ORDER BY w.createdAt DESC
-// 	`
+func (s *Store) GetWorkspace(projectId int) ([]entities.Workspace, error) {
+	// Step 1: Fetch Workspaces
+	workspacesQuery := `
+		SELECT 
+			id AS workspace_id,
+			name AS workspace_name,
+			description AS workspace_description,
+			projectId AS workspace_project_id,
+			colOrder AS workspace_col_order,
+			createdAt AS workspace_createdAt,
+			updatedAt AS workspace_updatedAt,
+			deletedAt AS workspace_deletedAt
+		FROM workspaces
+		WHERE projectId = $1 AND deletedAt IS NULL
+		ORDER BY createdAt DESC;
+	`
 
-// 	rows, err := s.db.Query(query, projectId)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("failed to query workspaces for project ID %d: %w", projectId, err)
-// 	}
-// 	defer rows.Close()
-
-// 	workspaces := []entities.Workspace{}
-// 	workspaceMap := make(map[int]*entities.Workspace)
-
-// 	for rows.Next() {
-// 		var workspace entities.Workspace
-// 		var project entities.Project
-// 		var task entities.Task
-// 		var taskID sql.NullInt64
-
-// 		err := rows.Scan(
-// 			&workspace.ID, &workspace.Name, &workspace.Description, &workspace.ProjectID,
-// 			&workspace.CreatedAt, &workspace.UpdatedAt,
-// 			&project.ID, &project.Name, &project.Description, &project.Progress,
-// 			&project.DateStarted, &project.DateDeadline,
-// 			&taskID, &task.Title, &task.Description, &task.UserID,
-// 			&task.PriorityID, &task.TaskOrder, &task.CreatedAt,
-// 		)
-// 		if err != nil {
-// 			log.Printf("Failed to scan workspace or task: %v", err)
-// 			continue
-// 		}
-
-// 		// Ensure workspace is only added once
-// 		if _, exists := workspaceMap[workspace.ID]; !exists {
-// 			workspace.Project = project
-// 			workspace.Tasks = []entities.Task{}
-// 			workspaceMap[workspace.ID] = &workspace
-// 			workspaces = append(workspaces, workspace)
-// 		}
-
-// 		// Add task if it has a valid ID
-// 		if taskID.Valid {
-// 			task.ID = int(taskID.Int64)
-// 			workspaceMap[workspace.ID].Tasks = append(workspaceMap[workspace.ID].Tasks, task)
-// 		}
-// 	}
-
-// 	if err := rows.Err(); err != nil {
-// 		return nil, fmt.Errorf("failed to iterate over workspace rows: %w", err)
-// 	}
-
-// 	return workspaces, nil
-// }
-
-func (s *Store) GetWorkspace(projectId int) (*entities.Workspace, error) {
-	// Query to get workspaces
-	queryWorkspaces := `
-        SELECT 
-            w.id, w.name, w.description, w.projectId, w.colOrder,
-            w.createdAt, w.updatedAt, w.deletedAt
-        FROM workspaces w
-        WHERE w.projectId = $1 AND w.deletedAt IS NULL
-        ORDER BY w.createdAt DESC
-    `
-
-	rows, err := s.db.Query(queryWorkspaces, projectId)
+	rows, err := s.db.Query(workspacesQuery, projectId)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query workspaces for project ID %d: %w", projectId, err)
+		return nil, fmt.Errorf("failed to query workspaces: %w", err)
 	}
 	defer rows.Close()
 
-	var workspaces []entities.Workspace
-	workspaceMap := make(map[int]*entities.Workspace)
+	var workspaceIDs []int
+	workspacesMap := make(map[int]*entities.Workspace)
 
-	// Process workspaces
 	for rows.Next() {
-		var workspace entities.Workspace
-
+		workspace := entities.Workspace{}
 		err := rows.Scan(
 			&workspace.ID,
 			&workspace.Name,
@@ -162,61 +101,150 @@ func (s *Store) GetWorkspace(projectId int) (*entities.Workspace, error) {
 			&workspace.DeletedAt,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan workspace: %w", err)
+			return nil, fmt.Errorf("failed to scan workspace data: %w", err)
 		}
-
-		workspace.Tasks = []entities.Task{} // Initialize Tasks slice
-		workspaces = append(workspaces, workspace)
-		workspaceMap[workspace.ID] = &workspaces[len(workspaces)-1] // Map ID to workspace pointer
+		workspacesMap[workspace.ID] = &workspace
+		workspacesMap[workspace.ID].Tasks = []entities.Task{} // Initialize empty task list
+		workspaceIDs = append(workspaceIDs, workspace.ID)
 	}
 
-	return nil, nil
+	// Debug: Print workspace IDs
+	fmt.Println("Workspace IDs:", workspaceIDs)
+
+	// Early return if no workspaces
+	if len(workspaceIDs) == 0 {
+		return []entities.Workspace{}, nil
+	}
+
+	// Step 2: Fetch Tasks
+	tasksQuery := `
+		SELECT 
+			id AS task_id,
+			workspaceId AS task_workspace_id,
+			title AS task_title,
+			description AS task_description,
+			userId AS task_user_id,
+			priorityId AS task_priority_id,
+			taskOrder AS task_order,
+			createdAt AS task_createdAt,
+			updatedAt AS task_updatedAt
+		FROM tasks
+		WHERE workspaceId = ANY($1) AND deletedAt IS NULL;
+	`
+
+	// Debug: Show query parameters
+	fmt.Printf("Fetching tasks for workspace IDs: %v\n", workspaceIDs)
+
+	taskRows, err := s.db.Query(tasksQuery, pq.Array(workspaceIDs))
+	if err != nil {
+		return nil, fmt.Errorf("failed to query tasks: %w", err)
+	}
+	defer taskRows.Close()
+
+	// Map tasks to workspaces
+	for taskRows.Next() {
+		task := entities.Task{}
+		var workspaceID int
+		err := taskRows.Scan(
+			&task.ID,
+			&workspaceID,
+			&task.Title,
+			&task.Description,
+			&task.UserID,
+			&task.PriorityID,
+			&task.TaskOrder,
+			&task.CreatedAt,
+			&task.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan task data: %w", err)
+		}
+		if workspace, exists := workspacesMap[workspaceID]; exists {
+			workspace.Tasks = append(workspace.Tasks, task)
+		}
+	}
+
+	// Convert map to slice
+	var workspaces []entities.Workspace
+	for _, workspace := range workspacesMap {
+		workspaces = append(workspaces, *workspace)
+	}
+
+	return workspaces, nil
 }
 
 func (s *Store) CreateWorkspace(payload entities.WorkspacePayload) (*entities.Workspace, error) {
+	// Start a transaction
 	tx, err := s.db.Begin()
-
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
-	_, err = tx.Exec("INSERT INTO workspaces (name, description) VALUES ($1, $2)", payload.Name, payload.Description)
+	// Insert the workspace data into the workspaces table
+	var workspaceID int
+	err = tx.QueryRow(`
+		INSERT INTO workspaces (name, description, projectId, colOrder) 
+		VALUES ($1, $2, $3, $4) 
+		RETURNING id`,
+		payload.Name, payload.Description, payload.ProjectID, payload.ColOrder,
+	).Scan(&workspaceID)
+
 	if err != nil {
-		// If there's an error, rollback the transaction
+		// Rollback the transaction in case of an error
 		if rbErr := tx.Rollback(); rbErr != nil {
 			return nil, fmt.Errorf("insert error: %v, rollback error: %v", err, rbErr)
 		}
-		return nil, err
+		return nil, fmt.Errorf("failed to insert workspace: %w", err)
 	}
 
-	// Commit the transaction if all went well
+	// Commit the transaction
 	if err = tx.Commit(); err != nil {
-		return &entities.Workspace{Name: payload.Name, Description: payload.Description}, err
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return &entities.Workspace{Name: payload.Name, Description: payload.Description}, err
+	// Fetch and return the newly created workspace
+	workspace := &entities.Workspace{
+		ID:          workspaceID,
+		Name:        payload.Name,
+		Description: payload.Description,
+		ProjectID:   payload.ProjectID,
+		ColOrder:    payload.ColOrder,
+		CreatedAt:   time.Now(), // Assuming this field is not overwritten by the DB
+		UpdatedAt:   time.Now(), // Assuming this field is not overwritten by the DB
+	}
+
+	return workspace, nil
 }
 
+// TODO DAPAT MATCH UNG PROJECTID SA WORKSPACE ID
 func (s *Store) UpdateWorkspace(payload entities.WorkspacePayload) error {
+	// Start a transaction
 	tx, err := s.db.Begin()
-
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
-	_, err = tx.Exec("UPDATE workspaces SET name = $1, description = $2, updatedAt = CURRENT_TIMESTAMP WHERE id = $3", payload.Name, payload.Description, payload.ID)
+	// Execute the update query
+	_, err = tx.Exec(`
+		UPDATE workspaces 
+		SET name = $1, description = $2, colOrder = $3, updatedAt = CURRENT_TIMESTAMP 
+		WHERE id = $4 AND projectId = $5 AND deletedAt IS NULL`,
+		payload.Name, payload.Description, payload.ColOrder, payload.ID, payload.ProjectID,
+	)
 	if err != nil {
+		// Rollback the transaction in case of an error
 		if rbErr := tx.Rollback(); rbErr != nil {
-			return fmt.Errorf("insert error: %v, rollback error: %v", err, rbErr)
+			return fmt.Errorf("update error: %v, rollback error: %v", err, rbErr)
 		}
-		return err
+		return fmt.Errorf("failed to update workspace: %w", err)
 	}
 
+	// Commit the transaction
 	if err = tx.Commit(); err != nil {
-		return err
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return err
+	return nil
 }
 
 func (s *Store) DeleteWorkspace(id int) error {
