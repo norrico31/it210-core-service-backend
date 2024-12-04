@@ -13,7 +13,7 @@ import (
 	"github.com/norrico31/it210-core-service-backend/services/roles"
 	"github.com/norrico31/it210-core-service-backend/services/segments"
 	"github.com/norrico31/it210-core-service-backend/services/statuses"
-	"github.com/norrico31/it210-core-service-backend/services/tasks"
+	"github.com/norrico31/it210-core-service-backend/services/tasksproject"
 	"github.com/norrico31/it210-core-service-backend/services/users"
 	"github.com/norrico31/it210-core-service-backend/services/workspaces"
 )
@@ -80,9 +80,9 @@ func (s *APIServer) Run() {
 	usersHandler := users.NewHandler(usersStore)
 	users.RegisterRoutes(subrouterv1, usersHandler)
 
-	taskStore := tasks.NewStore(s.db)
-	taskHandler := tasks.NewHandler(taskStore)
-	tasks.RegisterRoutes(subrouterv1, taskHandler)
+	tasksProject := tasksproject.NewStore(s.db)
+	tasksProjectStore := tasksproject.NewHandler(tasksProject)
+	tasksproject.RegisterRoutes(subrouterv1, tasksProjectStore)
 
 	projectStore := projects.NewStore(s.db)
 	projecthandler := projects.NewHandler(projectStore)

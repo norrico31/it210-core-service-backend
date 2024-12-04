@@ -49,6 +49,8 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 			"lastName":     user.LastName,
 			"email":        user.Email,
 			"age":          user.Age,
+			"roleId":       user.RoleId,
+			"role":         user.Role,
 			"lastActiveAt": user.LastActiveAt,
 			"createdAt":    user.CreatedAt,
 			"updatedAt":    user.UpdatedAt,

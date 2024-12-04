@@ -21,5 +21,6 @@ func main() {
 	seeders.SeedProjects(db)
 	seeders.SeedWorkspace(db)
 	seeders.SeedTasks(db)
+	seeders.SeedProjectTasks(db)
 	log.Println("Seeding successfully complete.")
 }

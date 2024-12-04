@@ -21,15 +21,37 @@ func NewStore(db *sql.DB) *Store {
 
 func (s *Store) Login(payload entities.UserLoginPayload) (string, entities.User, error) {
 	user := entities.User{}
+	role := entities.Role{}
 	err := s.db.QueryRow(`
 		SELECT
-			id, firstName, lastName, email, password, age, lastActiveAt, createdAt, updatedAt, deletedAt
-		FROM users 
-		WHERE email = $1 AND deletedAt IS NULL
+			u.id user_id, 
+			u.firstName user_firstname, 
+			u.lastName user_lastname, 
+			u.email user_email, 
+			u.password user_password, 
+			u.age user_age, 
+			u.roleId user_role_id, 
+			u.lastActiveAt user_lastActiveAt, 
+			u.createdAt user_createdAt, 
+			u.updatedAt user_updatedAt, 
+			u.deletedAt user_deletedAt,
+
+			r.id role_id, r.name role_name, r.description role_description, r.createdAt role_createdAt, r.updatedAt role_updatedAt, r.deletedAt role_deletedAt
+
+		FROM users u
+		LEFT JOIN
+			roles r ON r.id = u.roleId
+		WHERE u.email = $1 AND u.deletedAt IS NULL
+
 	`, payload.Email).Scan(
 		&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Password,
-		&user.Age, &user.LastActiveAt, &user.CreatedAt, &user.UpdatedAt, &user.DeletedAt,
+		&user.Age, &user.RoleId, &user.LastActiveAt, &user.CreatedAt, &user.UpdatedAt, &user.DeletedAt,
+		&role.ID, &role.Name, &role.Description, &role.CreatedAt, &role.UpdatedAt, &role.DeletedAt,
 	)
+
+	if role.ID != 0 {
+		user.Role = role
+	}
 
 	if err == sql.ErrNoRows {
 		return "", user, fmt.Errorf("user not found")
@@ -41,7 +63,6 @@ func (s *Store) Login(payload entities.UserLoginPayload) (string, entities.User,
 	if err != nil {
 		return "", user, fmt.Errorf("invalid password")
 	}
-	fmt.Println(user.ID)
 	token, err := utils.GenerateJWT(user)
 	if err != nil {
 		return "", user, fmt.Errorf("failed to generate token: %v", err)
@@ -238,7 +259,6 @@ func (s *Store) GetUserById(id int) (*entities.User, error) {
 			p.name AS project_name,
 			p.statusId AS project_status_id,
 			p.progress AS project_progress,
-			p.segmentId AS project_segment_id,
 			p.description AS project_description,
 			p.createdAt AS project_created_at,
 			p.updatedAt AS project_updated_at,
@@ -248,7 +268,7 @@ func (s *Store) GetUserById(id int) (*entities.User, error) {
 			s.description AS status_description,
 			s.createdAt AS status_created_at,
 			s.updatedAt AS status_updated_at,
-			
+
 			seg.id AS segment_id,
 			seg.name AS segment_name,
 			seg.description AS segment_description,
@@ -260,9 +280,11 @@ func (s *Store) GetUserById(id int) (*entities.User, error) {
 		LEFT JOIN users_projects up ON u.id = up.user_id
 		LEFT JOIN projects p ON up.project_id = p.id
 		LEFT JOIN statuses s ON s.id = p.statusId
-		LEFT JOIN segments seg ON seg.id = p.segmentId
+		LEFT JOIN segments_projects sp ON sp.projectId = p.id
+		LEFT JOIN segments seg ON seg.id = sp.segmentId
 		WHERE u.id = $1 AND u.deletedAt IS NULL
 		ORDER BY p.id;
+
 	`, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query user by id: %v", err)
@@ -272,12 +294,10 @@ func (s *Store) GetUserById(id int) (*entities.User, error) {
 	var (
 		userID                                                                                                                                 int
 		user                                                                                                                                   entities.User
-		roleID, userAge, projectStatusID, statusID, projectSegmentID                                                                           *int
-		roleName, roleDescription, statusName, statusDescription                                                                               *string
+		roleID, userAge, projectStatusID, statusID, segmentID                                                                                  *int
+		roleName, roleDescription, statusName, statusDescription, segmentName, segmentDescription                                              *string
 		roleCreatedAt, roleUpdatedAt, projectCreatedAt, projectUpdatedAt, statusCreatedAt, statusUpdatedAt, segmentCreatedAt, segmentUpdatedAt *time.Time
 		project                                                                                                                                entities.Project
-		segmentID                                                                                                                              *int
-		segmentName, segmentDescription                                                                                                        *string
 	)
 
 	// Using a map to track the user and its associated projects
@@ -306,7 +326,6 @@ func (s *Store) GetUserById(id int) (*entities.User, error) {
 			&project.Name,
 			&projectStatusID,
 			&project.Progress,
-			&projectSegmentID,
 			&project.Description,
 			&projectCreatedAt,
 			&projectUpdatedAt,
@@ -350,6 +369,7 @@ func (s *Store) GetUserById(id int) (*entities.User, error) {
 		// Add project if exists
 		if project.ID != 0 {
 			project.StatusID = *projectStatusID
+			project.SegmentID = *segmentID
 			if statusID != nil {
 				project.Status = entities.Status{
 					ID:          *statusID,
@@ -362,17 +382,16 @@ func (s *Store) GetUserById(id int) (*entities.User, error) {
 			project.CreatedAt = *projectCreatedAt
 			project.UpdatedAt = *projectUpdatedAt
 
-			// Add segment to project
-			// if segmentID != nil {
-			// 	project.SegmentID = *segmentID
-			// 	project.Segment = entities.Segment{
-			// 		ID:          *segmentID,
-			// 		Name:        *segmentName,
-			// 		Description: *segmentDescription,
-			// 		CreatedAt:   *segmentCreatedAt,
-			// 		UpdatedAt:   *segmentUpdatedAt,
-			// 	}
-			// }
+			// Assign the segment directly to the project
+			if segmentID != nil {
+				project.Segment = entities.Segment{
+					ID:          *segmentID,
+					Name:        *segmentName,
+					Description: *segmentDescription,
+					CreatedAt:   *segmentCreatedAt,
+					UpdatedAt:   *segmentUpdatedAt,
+				}
+			}
 
 			// Append project to user
 			userMap[userID].Projects = append(userMap[userID].Projects, project)
