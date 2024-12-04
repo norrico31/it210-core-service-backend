@@ -229,11 +229,16 @@ func (s *Store) TasksProjectUpdate(payload entities.TasksProjectUpdatePayload) e
 		return err
 	}
 
-	_, err = tx.Exec(`UPDATE tasks SET name = $1, description = $2, userId = $3, priorityId = $4, updatedAt = CURRENT_TIMESTAMP WHERE id = $5`,
+	_, err = tx.Exec(`
+		UPDATE project_tasks 
+		SET name = $1, description = $2, userId = $3, priorityId = $4, projectId = $5, updatedAt = CURRENT_TIMESTAMP 
+		WHERE id = $6
+		`,
 		payload.Name,
 		payload.Description,
 		payload.UserID,
 		payload.PriorityID,
+		payload.ProjectID,
 		payload.ID,
 	)
 	if err != nil {
