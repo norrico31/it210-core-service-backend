@@ -22,21 +22,21 @@ var Envs = initConfig()
 func initConfig() Config {
 	godotenv.Load()
 	return Config{
-		PublicHost:   getEnv("", "127.0.0.1"),
-		Port:         getEnv("", "8080"),
-		DBUser:       getEnv("", "postgres"),
-		DBPassword:   getEnv("", "root"),
-		DBName:       getEnv("", "it210"),
-		JWTSecret:    getEnv("JWT_SECRET", "IS-IT_REALL-A_SECRET-?~JWT-NOT_SO-SURE"),
-		DATABASE_URL: getEnv("", "127.0.0.1"),
+		// PublicHost:   getEnv("", "127.0.0.1"),
+		// Port:         getEnv("", "8080"),
+		// DBUser:       getEnv("", "postgres"),
+		// DBPassword:   getEnv("", "root"),
+		// DBName:       getEnv("", "it210"),
+		// JWTSecret:    getEnv("JWT_SECRET", "IS-IT_REALL-A_SECRET-?~JWT-NOT_SO-SURE"),
+		// DATABASE_URL: getEnv("", "127.0.0.1"),
 
-		// PublicHost:             getEnv("DATABASE_URL", ""),
-		// Port:                   getEnv("PORT", "8080"),
-		// DBUser:                 getEnv("POSTGRES_USER", ""),
-		// DBPassword:             getEnv("PGPASSWORD", ""),
-		// DBName:                 getEnv("POSTGRES_DB", ""),
-		// JWTSecret:              getEnv("JWT_SECRET", "IS-IT_REALL-A_SECRET-?~JWT-NOT_SO-SURE"),
-		// DATABASE_URL:           getEnv("DATABASE_PUBLIC_URL", ""),
+		PublicHost:   getEnv("DATABASE_URL", ""),
+		Port:         getEnv("PORT", "8080"),
+		DBUser:       getEnv("POSTGRES_USER", ""),
+		DBPassword:   getEnv("PGPASSWORD", ""),
+		DBName:       getEnv("POSTGRES_DB", ""),
+		JWTSecret:    getEnv("JWT_SECRET", "IS-IT_REALL-A_SECRET-?~JWT-NOT_SO-SURE"),
+		DATABASE_URL: getEnv("DATABASE_PUBLIC_URL", ""),
 	}
 }
 

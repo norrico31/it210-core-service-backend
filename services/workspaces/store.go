@@ -296,84 +296,84 @@ func (s *Store) RestoreWorkspace(id int) error {
 	return err
 }
 
-func (s *Store) TaskDragNDrop(workspaceId, sourceTaskId, destinationTaskId int) error {
-	// Step 1: Fetch tasks for the given workspace ordered by taskOrder
-	tasksQuery := `
-		SELECT 
-			id, 
-			taskOrder 
-		FROM tasks 
-		WHERE workspaceId = $1 
-		ORDER BY taskOrder;
-	`
-	rows, err := s.db.Query(tasksQuery, workspaceId)
-	if err != nil {
-		return fmt.Errorf("failed to fetch tasks for workspace %d: %w", workspaceId, err)
-	}
-	defer rows.Close()
+// func (s *Store) TaskDragNDrop(workspaceId, sourceTaskId, destinationTaskId int) error {
+// 	// Step 1: Fetch tasks for the given workspace ordered by taskOrder
+// 	tasksQuery := `
+// 		SELECT
+// 			id,
+// 			taskOrder
+// 		FROM tasks
+// 		WHERE workspaceId = $1
+// 		ORDER BY taskOrder;
+// 	`
+// 	rows, err := s.db.Query(tasksQuery, workspaceId)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to fetch tasks for workspace %d: %w", workspaceId, err)
+// 	}
+// 	defer rows.Close()
 
-	// Step 2: Create a map of taskID to taskOrder and a list of tasks in order
-	var tasks []struct {
-		ID        int
-		TaskOrder int
-	}
-	for rows.Next() {
-		var task struct {
-			ID        int
-			TaskOrder int
-		}
-		if err := rows.Scan(&task.ID, &task.TaskOrder); err != nil {
-			return fmt.Errorf("failed to scan task data: %w", err)
-		}
-		tasks = append(tasks, task)
-	}
+// 	// Step 2: Create a map of taskID to taskOrder and a list of tasks in order
+// 	var tasks []struct {
+// 		ID        int
+// 		TaskOrder int
+// 	}
+// 	for rows.Next() {
+// 		var task struct {
+// 			ID        int
+// 			TaskOrder int
+// 		}
+// 		if err := rows.Scan(&task.ID, &task.TaskOrder); err != nil {
+// 			return fmt.Errorf("failed to scan task data: %w", err)
+// 		}
+// 		tasks = append(tasks, task)
+// 	}
 
-	// Step 3: Identify the source and destination tasks
-	var sourceIndex, destinationIndex int
-	var sourceTaskOrder, destinationTaskOrder int
-	for i, task := range tasks {
-		if task.ID == sourceTaskId {
-			sourceIndex = i
-			sourceTaskOrder = task.TaskOrder
-		}
-		if task.ID == destinationTaskId {
-			destinationIndex = i
-			destinationTaskOrder = task.TaskOrder
-		}
-	}
+// 	// Step 3: Identify the source and destination tasks
+// 	var sourceIndex, destinationIndex int
+// 	var sourceTaskOrder, destinationTaskOrder int
+// 	for i, task := range tasks {
+// 		if task.ID == sourceTaskId {
+// 			sourceIndex = i
+// 			sourceTaskOrder = task.TaskOrder
+// 		}
+// 		if task.ID == destinationTaskId {
+// 			destinationIndex = i
+// 			destinationTaskOrder = task.TaskOrder
+// 		}
+// 	}
 
-	// If the source or destination task is not found, return an error
-	if sourceTaskOrder == 0 || destinationTaskOrder == 0 {
-		return fmt.Errorf("source or destination task not found")
-	}
+// 	// If the source or destination task is not found, return an error
+// 	if sourceTaskOrder == 0 || destinationTaskOrder == 0 {
+// 		return fmt.Errorf("source or destination task not found")
+// 	}
 
-	// Step 4: Update taskOrder for tasks
-	// If the source is being moved before or after the destination task
-	if sourceIndex < destinationIndex {
-		// Moving task after destination - shift tasks between source and destination
-		for i := sourceIndex + 1; i <= destinationIndex; i++ {
-			tasks[i].TaskOrder--
-		}
-	} else {
-		// Moving task before destination - shift tasks between destination and source
-		for i := destinationIndex; i < sourceIndex; i++ {
-			tasks[i].TaskOrder++
-		}
-	}
+// 	// Step 4: Update taskOrder for tasks
+// 	// If the source is being moved before or after the destination task
+// 	if sourceIndex < destinationIndex {
+// 		// Moving task after destination - shift tasks between source and destination
+// 		for i := sourceIndex + 1; i <= destinationIndex; i++ {
+// 			tasks[i].TaskOrder--
+// 		}
+// 	} else {
+// 		// Moving task before destination - shift tasks between destination and source
+// 		for i := destinationIndex; i < sourceIndex; i++ {
+// 			tasks[i].TaskOrder++
+// 		}
+// 	}
 
-	// Update the source task to the destination task's position
-	tasks[sourceIndex].TaskOrder = destinationTaskOrder
+// 	// Update the source task to the destination task's position
+// 	tasks[sourceIndex].TaskOrder = destinationTaskOrder
 
-	// Step 5: Update taskOrder in the database
-	for _, task := range tasks {
-		_, err := s.db.Exec(`UPDATE tasks SET taskOrder = $1 WHERE id = $2`, task.TaskOrder, task.ID)
-		if err != nil {
-			return fmt.Errorf("failed to update taskOrder for task %d: %w", task.ID, err)
-		}
-	}
+// 	// Step 5: Update taskOrder in the database
+// 	for _, task := range tasks {
+// 		_, err := s.db.Exec(`UPDATE tasks SET taskOrder = $1 WHERE id = $2`, task.TaskOrder, task.ID)
+// 		if err != nil {
+// 			return fmt.Errorf("failed to update taskOrder for task %d: %w", task.ID, err)
+// 		}
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 func scanRowIntoWorkspace(rows *sql.Rows, workspace *entities.Workspace) error {
 	return rows.Scan(

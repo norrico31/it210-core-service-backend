@@ -250,93 +250,93 @@ func (s *Store) TaskRestore(id int) (*entities.Task, error) {
 	return &task, nil
 }
 
-func (s *Store) TaskDragNDrop(workspaceId int, sourceIndex, destinationIndex int) error {
-	tx, err := s.db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if p := recover(); p != nil {
-			tx.Rollback()
-			panic(p)
-		} else if err != nil {
-			tx.Rollback()
-		} else {
-			err = tx.Commit()
-		}
-	}()
+// func (s *Store) TaskDragNDrop(workspaceId int, sourceIndex, destinationIndex int) error {
+// 	tx, err := s.db.Begin()
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer func() {
+// 		if p := recover(); p != nil {
+// 			tx.Rollback()
+// 			panic(p)
+// 		} else if err != nil {
+// 			tx.Rollback()
+// 		} else {
+// 			err = tx.Commit()
+// 		}
+// 	}()
 
-	// Fetch the task ID at the source index
-	var sourceTaskId int
-	err = tx.QueryRow(`
-		SELECT id FROM tasks
-			WHERE workspaceId = $1
-			ORDER BY taskOrder ASC
-		LIMIT 1 OFFSET $2
-	`, workspaceId, sourceIndex).Scan(&sourceTaskId)
-	if err != nil {
-		return fmt.Errorf("failed to fetch source task: %v", err)
-	}
+// 	// Fetch the task ID at the source index
+// 	var sourceTaskId int
+// 	err = tx.QueryRow(`
+// 		SELECT id FROM tasks
+// 			WHERE workspaceId = $1
+// 			ORDER BY taskOrder ASC
+// 		LIMIT 1 OFFSET $2
+// 	`, workspaceId, sourceIndex).Scan(&sourceTaskId)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to fetch source task: %v", err)
+// 	}
 
-	// Fetch the task ID at the destination index
-	var destinationTaskId int
-	err = tx.QueryRow(`
-		SELECT id FROM tasks
-			WHERE workspaceId = $1
-			ORDER BY taskOrder ASC
-		LIMIT 1 OFFSET $2
-	`, workspaceId, destinationIndex).Scan(&destinationTaskId)
-	if err != nil {
-		return fmt.Errorf("failed to fetch destination task: %v", err)
-	}
+// 	// Fetch the task ID at the destination index
+// 	var destinationTaskId int
+// 	err = tx.QueryRow(`
+// 		SELECT id FROM tasks
+// 			WHERE workspaceId = $1
+// 			ORDER BY taskOrder ASC
+// 		LIMIT 1 OFFSET $2
+// 	`, workspaceId, destinationIndex).Scan(&destinationTaskId)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to fetch destination task: %v", err)
+// 	}
 
-	// Adjust taskOrder based on direction of the move
-	if sourceIndex < destinationIndex {
-		// Moving down
-		_, err = tx.Exec(`
-			UPDATE tasks
-			SET taskOrder = taskOrder - 1
-			WHERE workspaceId = $1
-			AND taskOrder > (
-				SELECT taskOrder FROM tasks WHERE id = $2
-			) AND taskOrder <= (
-				SELECT taskOrder FROM tasks WHERE id = $3
-			)
-		`, workspaceId, sourceTaskId, destinationTaskId)
-		if err != nil {
-			return fmt.Errorf("failed to decrement taskOrder: %v", err)
-		}
-	} else if sourceIndex > destinationIndex {
-		// Moving up
-		_, err = tx.Exec(`
-			UPDATE tasks
-			SET taskOrder = taskOrder + 1
-			WHERE workspaceId = $1
-			AND taskOrder < (
-				SELECT taskOrder FROM tasks WHERE id = $2
-			) AND taskOrder >= (
-				SELECT taskOrder FROM tasks WHERE id = $3
-			)
-		`, workspaceId, sourceTaskId, destinationTaskId)
-		if err != nil {
-			return fmt.Errorf("failed to increment taskOrder: %v", err)
-		}
-	}
+// 	// Adjust taskOrder based on direction of the move
+// 	if sourceIndex < destinationIndex {
+// 		// Moving down
+// 		_, err = tx.Exec(`
+// 			UPDATE tasks
+// 			SET taskOrder = taskOrder - 1
+// 			WHERE workspaceId = $1
+// 			AND taskOrder > (
+// 				SELECT taskOrder FROM tasks WHERE id = $2
+// 			) AND taskOrder <= (
+// 				SELECT taskOrder FROM tasks WHERE id = $3
+// 			)
+// 		`, workspaceId, sourceTaskId, destinationTaskId)
+// 		if err != nil {
+// 			return fmt.Errorf("failed to decrement taskOrder: %v", err)
+// 		}
+// 	} else if sourceIndex > destinationIndex {
+// 		// Moving up
+// 		_, err = tx.Exec(`
+// 			UPDATE tasks
+// 			SET taskOrder = taskOrder + 1
+// 			WHERE workspaceId = $1
+// 			AND taskOrder < (
+// 				SELECT taskOrder FROM tasks WHERE id = $2
+// 			) AND taskOrder >= (
+// 				SELECT taskOrder FROM tasks WHERE id = $3
+// 			)
+// 		`, workspaceId, sourceTaskId, destinationTaskId)
+// 		if err != nil {
+// 			return fmt.Errorf("failed to increment taskOrder: %v", err)
+// 		}
+// 	}
 
-	// Set the new position for the dragged task
-	_, err = tx.Exec(`
-		UPDATE tasks
-		SET taskOrder = (
-			SELECT taskOrder FROM tasks WHERE id = $1
-		)
-		WHERE id = $2
-	`, destinationTaskId, sourceTaskId)
-	if err != nil {
-		return fmt.Errorf("failed to update source task order: %v", err)
-	}
+// 	// Set the new position for the dragged task
+// 	_, err = tx.Exec(`
+// 		UPDATE tasks
+// 		SET taskOrder = (
+// 			SELECT taskOrder FROM tasks WHERE id = $1
+// 		)
+// 		WHERE id = $2
+// 	`, destinationTaskId, sourceTaskId)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to update source task order: %v", err)
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 func scanRowIntoTask(rows *sql.Rows, task *entities.Task) error {
 	return rows.Scan(

@@ -11,7 +11,7 @@ type TaskStore interface {
 	TaskUpdate(TaskUpdatePayload) error
 	TaskDelete(int) error
 	TaskRestore(int) (*Task, error)
-	TaskDragNDrop(int, int, int) error
+	// TaskDragNDrop(int, int, int) error
 }
 
 type Task struct {
