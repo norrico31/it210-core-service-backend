@@ -39,7 +39,7 @@ func (s *Store) GetTasksProject(projectId int) ([]*entities.TasksProject, error)
         FROM project_tasks pt
         JOIN users u ON pt.userId = u.id
         JOIN priorities p ON pt.priorityId = p.id
-        WHERE pt.projectId = $1 AND pt.deletedAt IS NULL AND u.deletedAt IS NULL AND p.deletedAt IS NULL
+        WHERE pt.projectId = $1 AND pt.deletedAt IS NULL
     `)
 
 	rows, err := s.db.Query(query, projectId) // Pass projectId as a parameter
@@ -260,7 +260,7 @@ func (s *Store) TasksProjectDelete(id int) error {
 		return err
 	}
 
-	_, err = tx.Exec("UPDATE tasks SET deletedAt = CURRENT_TIMESTAMP WHERE id = $1", id)
+	_, err = tx.Exec("UPDATE project_tasks SET deletedAt = CURRENT_TIMESTAMP WHERE id = $1", id)
 	if err != nil {
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
 			return fmt.Errorf("error deleting tasksProject: %v, rollback error: %v", err, rollbackErr)
