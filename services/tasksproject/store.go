@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/norrico31/it210-core-service-backend/entities"
 )
@@ -17,99 +18,155 @@ func NewStore(db *sql.DB) *Store {
 }
 
 func (s *Store) GetTasksProject(projectId int) ([]*entities.TasksProject, error) {
-	// SQL query without subtasks
-	print("PWEDE NA KO MAG PRINT DITO?")
+	// SQL query to get tasks based on projectId and include user and priority details as nested objects
 	query := fmt.Sprintf(`
         SELECT 
-			t.id, t.title, t.description, t.userId, t.priorityId, t.projectId, t.createdAt, t.updatedAt, t.deletedAt, t.deletedBy
-        FROM tasks t
+			pt.id task_id, 
+			pt.name task_name, 
+			pt.description task_description, 
+			pt.userId task_user_id, 
+			pt.priorityId task_priority_id, 
+			pt.projectId task_project_id, 
+			pt.createdAt task_createdAt, 
+			pt.updatedAt task_updatedAt, 
+			pt.deletedAt task_deletedAt,
+			u.firstName user_firstname,
+			u.lastName user_lastname,
+			u.age user_age,
+			u.email user_email,
+			p.name priority_name,
+			p.description priority_description
+        FROM project_tasks pt
+        JOIN users u ON pt.userId = u.id
+        JOIN priorities p ON pt.priorityId = p.id
+        WHERE pt.projectId = $1 AND pt.deletedAt IS NULL AND u.deletedAt IS NULL AND p.deletedAt IS NULL
     `)
 
-	rows, err := s.db.Query(query)
+	rows, err := s.db.Query(query, projectId) // Pass projectId as a parameter
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	tasksMap := make(map[int]*entities.TasksProject)
+	tasksProjectList := []*entities.TasksProject{}
 	for rows.Next() {
 		tasksProject := entities.TasksProject{}
+		var userFirstName, userLastName, userEmail string
+		var userAge int
+		var priorityName, priorityDescription string
 
 		err := rows.Scan(
-			&tasksProject.ID, &tasksProject.Name, &tasksProject.Description, &tasksProject.UserID, &tasksProject.PriorityID, &tasksProject.ProjectID, &tasksProject.CreatedAt,
-			&tasksProject.UpdatedAt, &tasksProject.DeletedAt, &tasksProject.DeletedBy,
+			&tasksProject.ID, &tasksProject.Name, &tasksProject.Description, &tasksProject.UserID,
+			&tasksProject.PriorityID, &tasksProject.ProjectID, &tasksProject.CreatedAt,
+			&tasksProject.UpdatedAt, &tasksProject.DeletedAt,
+			&userFirstName, &userLastName, &userAge, &userEmail,
+			&priorityName, &priorityDescription,
 		)
 
 		if err != nil {
 			log.Printf("Failed to scan tasksProject: %v", err)
 			continue
 		}
-		tasksMap[tasksProject.ID] = &tasksProject
+
+		// Set user info in a nested User object
+		tasksProject.User = entities.User{
+			ID:        *tasksProject.UserID,
+			FirstName: userFirstName,
+			LastName:  userLastName,
+			Age:       userAge,
+			Email:     userEmail,
+		}
+
+		// Set priority info in a nested Priority object
+		tasksProject.Priority = entities.Priority{
+			ID:          tasksProject.PriorityID,
+			Name:        priorityName,
+			Description: priorityDescription,
+		}
+
+		tasksProjectList = append(tasksProjectList, &tasksProject)
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("failed to iterate over tasksProject rows: %v", err)
 	}
 
-	tasksProjectList := make([]*entities.TasksProject, 0, len(tasksMap))
-	for _, tasksProject := range tasksMap {
-		tasksProjectList = append(tasksProjectList, tasksProject)
-	}
-
 	return tasksProjectList, nil
 }
 
-func (s *Store) GetTaskProject(projectId, taskId int) (*entities.TasksProject, error) {
+func (s *Store) GetTaskProject(taskId int) (*entities.TasksProject, error) {
+	// SQL query to get a single task with related user, priority, and project details
 	query := fmt.Sprintf(`
         SELECT 
-			t.id, t.title, t.description, t.userId, t.priorityId, t.projectId, t.createdAt, t.updatedAt, t.deletedAt, t.deletedBy,
-
-			u.id AS user_id, u.firstName, u.lastName, u.email, u.age, u.lastActiveAt, u.createdAt AS user_createdAt, u.updatedAt AS user_updatedAt, u.deletedAt AS user_deletedAt,
-
-			p.id priority_id, p.name priority_name, p.description priority_description, p.createdAt priority_createdAt, p.updatedAt priority_updatedAt, p.deletedAt priority_deletedAt,
-
-			w.id workspace_id, w.name workspace_name, w.description workspace_description
-
-			FROM tasks t
-			LEFT JOIN
-				 users u ON u.id = t.userId
-			LEFT JOIN
-				priorities p ON p.id = t.priorityId
-			LEFT JOIN
-				workspaces w ON w.id = t.workspaceId
-			WHERE t.id = $1 AND t.deletedAt IS NULL
+			pt.id, pt.name, pt.description, pt.userId, pt.priorityId, pt.projectId, pt.createdAt, pt.updatedAt, pt.deletedAt, pt.deletedBy,
+			u.firstName user_firstname, u.lastName user_lastname, u.age user_age, u.email user_email,
+			p.name priority_name, p.description priority_description,
+			pr.name project_name, pr.description project_description, pr.progress project_progress, pr.url project_url, pr.dateStarted project_dateStarted, pr.dateDeadline project_dateDeadline
+		FROM project_tasks pt
+		LEFT JOIN users u ON u.id = pt.userId
+		LEFT JOIN priorities p ON p.id = pt.priorityId
+		LEFT JOIN projects pr ON pr.id = pt.projectId
+		WHERE pt.id = $1 AND pt.deletedAt IS NULL
     `)
 
-	row := s.db.QueryRow(query, projectId)
+	row := s.db.QueryRow(query, taskId)
 
 	tasksProject := &entities.TasksProject{}
-	var user entities.User
-	var priority entities.Priority
-	var workspace entities.Workspace
+	var userFirstName, userLastName, userEmail string
+	var userAge int
+	var priorityName, priorityDescription string
+	var projectName, projectDescription, projectURL *string
+	var projectProgress *float64
+	var projectDateStarted, projectDateDeadline *time.Time
 
+	// Scan the result into the TasksProject and related User, Priority, and Project fields
 	err := row.Scan(
 		&tasksProject.ID, &tasksProject.Name, &tasksProject.Description, &tasksProject.UserID, &tasksProject.PriorityID, &tasksProject.ProjectID, &tasksProject.CreatedAt,
 		&tasksProject.UpdatedAt, &tasksProject.DeletedAt, &tasksProject.DeletedBy,
 
-		&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Age, &user.LastActiveAt, &user.CreatedAt,
-		&user.UpdatedAt, &user.DeletedAt,
+		&userFirstName, &userLastName, &userAge, &userEmail,
+		&priorityName, &priorityDescription,
 
-		&priority.ID, &priority.Name, &priority.Description, &priority.CreatedAt, &priority.UpdatedAt, &priority.DeletedAt,
-
-		&workspace.ID, &workspace.Name, &workspace.Description,
+		&projectName, &projectDescription, &projectProgress, &projectURL, &projectDateStarted, &projectDateDeadline,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("tasksProject with ID %d not found", projectId)
+			return nil, fmt.Errorf("task with ID %d not found", taskId)
 		}
-		return nil, fmt.Errorf("failed to retrieve tasksProject: %v", err)
+		return nil, fmt.Errorf("failed to retrieve task: %v", err)
 	}
 
-	if priority.ID != 0 {
-		tasksProject.Priority = priority
+	// Set User info in a nested User object if user exists
+	if userFirstName != "" && userLastName != "" {
+		tasksProject.User = entities.User{
+			ID:        *tasksProject.UserID,
+			FirstName: userFirstName,
+			LastName:  userLastName,
+			Age:       userAge,
+			Email:     userEmail,
+		}
 	}
-	if user.ID != 0 {
-		tasksProject.User = user
+
+	// Set Priority info in a nested Priority object if priority exists
+	if priorityName != "" && priorityDescription != "" {
+		tasksProject.Priority = entities.Priority{
+			ID:          tasksProject.PriorityID,
+			Name:        priorityName,
+			Description: priorityDescription,
+		}
+	}
+
+	// Set Project info in a nested Project object if project exists
+	if projectName != nil && projectDescription != nil {
+		tasksProject.Project = entities.Project{
+			ID:           tasksProject.PriorityID,
+			Name:         *projectName,
+			Description:  *projectDescription,
+			Progress:     projectProgress,
+			Url:          projectURL,
+			DateStarted:  projectDateStarted,
+			DateDeadline: projectDateDeadline,
+		}
 	}
 
 	return tasksProject, nil
@@ -131,9 +188,9 @@ func (s *Store) TasksProjectCreate(payload entities.TasksProjectCreatePayload) (
 
 	tasksProject := entities.TasksProject{}
 	query := `
-		INSERT INTO tasks (title, description, userId, priorityId, workspaceId, taskOrder)
+		INSERT INTO tasks (name, description, userId, priorityId, workspaceId, taskOrder)
 		VALUES ($1, $2, $3, $4, $5, NULL)
-		RETURNING id, title, description, userId, priorityId, workspaceId, taskOrder, createdAt, updatedAt
+		RETURNING id, name, description, userId, priorityId, workspaceId, taskOrder, createdAt, updatedAt
 	`
 	err = tx.QueryRow(
 		query,
@@ -169,7 +226,7 @@ func (s *Store) TasksProjectUpdate(payload entities.TasksProjectUpdatePayload) e
 		return err
 	}
 
-	_, err = tx.Exec(`UPDATE tasks SET title = $1, description = $2, userId = $3, priorityId = $4, updatedAt = CURRENT_TIMESTAMP WHERE id = $5`,
+	_, err = tx.Exec(`UPDATE tasks SET name = $1, description = $2, userId = $3, priorityId = $4, updatedAt = CURRENT_TIMESTAMP WHERE id = $5`,
 		payload.Name,
 		payload.Description,
 		payload.UserID,
@@ -216,7 +273,7 @@ func (s *Store) TasksProjectRestore(id int) (*entities.TasksProject, error) {
 		return nil, err
 	}
 	tasksProject := entities.TasksProject{}
-	err = tx.QueryRow("UPDATE tasks SET deletedAt = NULL WHERE id = $1 RETURNING id, title, description, userId, createdAt, updatedAt, deletedAt", id).Scan(
+	err = tx.QueryRow("UPDATE tasks SET deletedAt = NULL WHERE id = $1 RETURNING id, name, description, userId, createdAt, updatedAt, deletedAt", id).Scan(
 		&tasksProject.ID,
 		&tasksProject.Name,
 		&tasksProject.Description,

@@ -6,7 +6,7 @@ import (
 
 type TasksProjectStore interface {
 	GetTasksProject(int) ([]*TasksProject, error)
-	GetTaskProject(int, int) (*TasksProject, error)
+	GetTaskProject(int) (*TasksProject, error)
 	TasksProjectCreate(TasksProjectCreatePayload) (*TasksProject, error)
 	TasksProjectUpdate(TasksProjectUpdatePayload) error
 	TasksProjectDelete(int) error
@@ -21,6 +21,7 @@ type TasksProject struct {
 	User        User       `json:"user"`
 	PriorityID  int        `json:"priorityId"`
 	ProjectID   int        `json:"projectId"`
+	Project     Project    `json:"project"`
 	Priority    Priority   `json:"priority"`
 	CreatedAt   time.Time  `json:"createdAt"`
 	UpdatedAt   time.Time  `json:"updatedAt"`

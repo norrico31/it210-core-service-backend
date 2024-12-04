@@ -44,27 +44,27 @@ func (h *Handler) handleGetTasksProject(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *Handler) handleGetTaskProject(w http.ResponseWriter, r *http.Request) {
-	// vars := mux.Vars(r)
-	// str, ok := vars["projectId"]
-	// if !ok {
-	// 	utils.WriteError(w, http.StatusNotFound, fmt.Errorf("invalid task id"))
-	// 	return
-	// }
+	vars := mux.Vars(r)
+	str, ok := vars["taskId"]
+	if !ok {
+		utils.WriteError(w, http.StatusNotFound, fmt.Errorf("invalid task id"))
+		return
+	}
 
-	// projectId, err := strconv.Atoi(str)
-	// if err != nil {
-	// 	utils.WriteError(w, http.StatusBadRequest, err)
-	// 	return
-	// }
-	// tasksProject, err := h.store.GetTasksProject(projectId)
-	// if err != nil {
-	// 	utils.WriteError(w, http.StatusBadRequest, err)
-	// 	return
-	// }
+	taskId, err := strconv.Atoi(str)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+	tasksProject, err := h.store.GetTaskProject(taskId)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
 
-	// w.Header().Set("Content-type", "application/json")
+	w.Header().Set("Content-type", "application/json")
 
-	// utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"data": tasksProject})
+	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"data": tasksProject})
 }
 
 func (h *Handler) handleGetDeletedTasksProject(w http.ResponseWriter, r *http.Request) {
