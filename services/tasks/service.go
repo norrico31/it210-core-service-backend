@@ -180,14 +180,14 @@ func (h *Handler) handleTaskDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := h.store.TaskDelete(taskId)
+	err = h.store.TaskDelete(taskId)
 
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
 		return
 	}
 
-	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"msg": "Delete Task Successfully", "data": task})
+	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"msg": "Delete Task Successfully"})
 
 }
 
@@ -213,4 +213,44 @@ func (h *Handler) handleTaskRestore(w http.ResponseWriter, r *http.Request) {
 
 	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"msg": "Restore Task Successfully!", "data": task})
 
+}
+
+func (h *Handler) handleTaskDragNDrop(w http.ResponseWriter, r *http.Request) {
+	// Parse query parameter for workspaceId
+	workspaceIdStr := r.URL.Query().Get("workspaceId")
+	if workspaceIdStr == "" {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing workspaceId query parameter"))
+		return
+	}
+	print("pumapasok ba siya dito?")
+	workspaceId, err := strconv.Atoi(workspaceIdStr)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid workspaceId"))
+		return
+	}
+
+	// Parse JSON payload
+	var payload entities.TaskDragNDrop
+
+	if err := utils.ParseJSON(r, &payload); err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid JSON payload"))
+		return
+	}
+
+	// Validate payload
+	if payload.SourceIndex < 0 || payload.DestinationIndex < 0 {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("sourceIndex and destinationIndex must be non-negative"))
+		return
+	}
+
+	// Call store method to update task order
+	err = h.store.TaskDragNDrop(workspaceId, payload.SourceIndex, payload.DestinationIndex)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"message": "Task order updated successfully",
+	})
 }

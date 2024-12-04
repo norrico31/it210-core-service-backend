@@ -7,11 +7,11 @@ import (
 
 func RegisterRoutes(router *mux.Router, h *Handler) {
 	utils.SecureRoute(router, "/tasks", h.handleGetTasks, "GET")
-	utils.SecureRoute(router, "/tasks/deleted", h.handleGetDeletedTasks, "GET")
 	utils.SecureRoute(router, "/tasks", h.handleTaskCreate, "POST")
+	utils.SecureRoute(router, "/tasks/deleted", h.handleGetDeletedTasks, "GET")
+	// utils.SecureRoute(router, "/tasks/reorder", h.handleTaskDragNDrop, "PUT")
 	utils.SecureRoute(router, "/tasks/{taskId}", h.handleGetTask, "GET")
 	utils.SecureRoute(router, "/tasks/{taskId}", h.handleTaskUpdate, "PUT")
 	utils.SecureRoute(router, "/tasks/{taskId}", h.handleTaskDelete, "DELETE")
 	utils.SecureRoute(router, "/tasks/{taskId}/restore", h.handleTaskRestore, "PUT")
-
 }

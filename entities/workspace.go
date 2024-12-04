@@ -11,6 +11,7 @@ type WorkspaceStore interface {
 	UpdateWorkspace(WorkspacePayload) error
 	DeleteWorkspace(int) error
 	RestoreWorkspace(int) error
+	TaskDragNDrop(int, int, int) error
 }
 
 type Workspace struct {
@@ -33,6 +34,11 @@ type WorkspacePayload struct {
 	Description string `json:"description"`
 	ProjectID   int    `json:"projectId"`
 	ColOrder    int    // Optional
+}
+
+type TaskDragNDrop struct {
+	SourceTaskId      int `json:"sourceTaskId"`
+	DestinationTaskId int `json:"destinationTaskId"`
 }
 
 // TODO DRAGNDROP for colOrder

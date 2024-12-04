@@ -3,6 +3,7 @@ package workspaces
 import (
 	"database/sql"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/lib/pq"
@@ -65,19 +66,19 @@ func (s *Store) GetWorkspaces() ([]entities.Workspace, error) {
 func (s *Store) GetWorkspace(projectId int) ([]entities.Workspace, error) {
 	// Step 1: Fetch Workspaces
 	workspacesQuery := `
-		SELECT 
-			id AS workspace_id,
-			name AS workspace_name,
-			description AS workspace_description,
-			projectId AS workspace_project_id,
-			colOrder AS workspace_col_order,
-			createdAt AS workspace_createdAt,
-			updatedAt AS workspace_updatedAt,
-			deletedAt AS workspace_deletedAt
-		FROM workspaces
-		WHERE projectId = $1 AND deletedAt IS NULL
-		ORDER BY createdAt DESC;
-	`
+    SELECT 
+        id AS workspace_id,
+        name AS workspace_name,
+        description AS workspace_description,
+        projectId AS workspace_project_id,
+        colOrder AS workspace_col_order,
+        createdAt AS workspace_createdAt,
+        updatedAt AS workspace_updatedAt,
+        deletedAt AS workspace_deletedAt
+    FROM workspaces
+    WHERE projectId = $1 AND deletedAt IS NULL
+    ORDER BY createdAt DESC;
+`
 
 	rows, err := s.db.Query(workspacesQuery, projectId)
 	if err != nil {
@@ -108,33 +109,27 @@ func (s *Store) GetWorkspace(projectId int) ([]entities.Workspace, error) {
 		workspaceIDs = append(workspaceIDs, workspace.ID)
 	}
 
-	// Debug: Print workspace IDs
-	fmt.Println("Workspace IDs:", workspaceIDs)
-
 	// Early return if no workspaces
 	if len(workspaceIDs) == 0 {
 		return []entities.Workspace{}, nil
 	}
 
-	// Step 2: Fetch Tasks
+	// Step 2: Fetch Tasks (same as before)
 	tasksQuery := `
-		SELECT 
-			id AS task_id,
-			workspaceId AS task_workspace_id,
-			title AS task_title,
-			description AS task_description,
-			userId AS task_user_id,
-			priorityId AS task_priority_id,
-			taskOrder AS task_order,
-			createdAt AS task_createdAt,
-			updatedAt AS task_updatedAt,
-			deletedAt task_deletedAt
-		FROM tasks
-		WHERE workspaceId = ANY($1) AND deletedAt IS NULL;
-	`
-
-	// Debug: Show query parameters
-	fmt.Printf("Fetching tasks for workspace IDs: %v\n", workspaceIDs)
+    SELECT 
+        id AS task_id,
+        workspaceId AS task_workspace_id,
+        title AS task_title,
+        description AS task_description,
+        userId AS task_user_id,
+        priorityId AS task_priority_id,
+        taskOrder AS task_order,
+        createdAt AS task_createdAt,
+        updatedAt AS task_updatedAt,
+        deletedAt task_deletedAt
+    FROM tasks
+    WHERE workspaceId = ANY($1) AND deletedAt IS NULL;
+`
 
 	taskRows, err := s.db.Query(tasksQuery, pq.Array(workspaceIDs))
 	if err != nil {
@@ -164,6 +159,13 @@ func (s *Store) GetWorkspace(projectId int) ([]entities.Workspace, error) {
 		if workspace, exists := workspacesMap[workspaceID]; exists {
 			workspace.Tasks = append(workspace.Tasks, task)
 		}
+	}
+
+	// Step 3: Sort tasks by taskOrder in ascending order
+	for _, workspace := range workspacesMap {
+		sort.Slice(workspace.Tasks, func(i, j int) bool {
+			return workspace.Tasks[i].TaskOrder < workspace.Tasks[j].TaskOrder
+		})
 	}
 
 	// Convert map to slice
@@ -292,6 +294,85 @@ func (s *Store) RestoreWorkspace(id int) error {
 	}
 
 	return err
+}
+
+func (s *Store) TaskDragNDrop(workspaceId, sourceTaskId, destinationTaskId int) error {
+	// Step 1: Fetch tasks for the given workspace ordered by taskOrder
+	tasksQuery := `
+		SELECT 
+			id, 
+			taskOrder 
+		FROM tasks 
+		WHERE workspaceId = $1 
+		ORDER BY taskOrder;
+	`
+	rows, err := s.db.Query(tasksQuery, workspaceId)
+	if err != nil {
+		return fmt.Errorf("failed to fetch tasks for workspace %d: %w", workspaceId, err)
+	}
+	defer rows.Close()
+
+	// Step 2: Create a map of taskID to taskOrder and a list of tasks in order
+	var tasks []struct {
+		ID        int
+		TaskOrder int
+	}
+	for rows.Next() {
+		var task struct {
+			ID        int
+			TaskOrder int
+		}
+		if err := rows.Scan(&task.ID, &task.TaskOrder); err != nil {
+			return fmt.Errorf("failed to scan task data: %w", err)
+		}
+		tasks = append(tasks, task)
+	}
+
+	// Step 3: Identify the source and destination tasks
+	var sourceIndex, destinationIndex int
+	var sourceTaskOrder, destinationTaskOrder int
+	for i, task := range tasks {
+		if task.ID == sourceTaskId {
+			sourceIndex = i
+			sourceTaskOrder = task.TaskOrder
+		}
+		if task.ID == destinationTaskId {
+			destinationIndex = i
+			destinationTaskOrder = task.TaskOrder
+		}
+	}
+
+	// If the source or destination task is not found, return an error
+	if sourceTaskOrder == 0 || destinationTaskOrder == 0 {
+		return fmt.Errorf("source or destination task not found")
+	}
+
+	// Step 4: Update taskOrder for tasks
+	// If the source is being moved before or after the destination task
+	if sourceIndex < destinationIndex {
+		// Moving task after destination - shift tasks between source and destination
+		for i := sourceIndex + 1; i <= destinationIndex; i++ {
+			tasks[i].TaskOrder--
+		}
+	} else {
+		// Moving task before destination - shift tasks between destination and source
+		for i := destinationIndex; i < sourceIndex; i++ {
+			tasks[i].TaskOrder++
+		}
+	}
+
+	// Update the source task to the destination task's position
+	tasks[sourceIndex].TaskOrder = destinationTaskOrder
+
+	// Step 5: Update taskOrder in the database
+	for _, task := range tasks {
+		_, err := s.db.Exec(`UPDATE tasks SET taskOrder = $1 WHERE id = $2`, task.TaskOrder, task.ID)
+		if err != nil {
+			return fmt.Errorf("failed to update taskOrder for task %d: %w", task.ID, err)
+		}
+	}
+
+	return nil
 }
 
 func scanRowIntoWorkspace(rows *sql.Rows, workspace *entities.Workspace) error {

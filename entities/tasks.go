@@ -9,8 +9,9 @@ type TaskStore interface {
 	GetTask(int) (*Task, error)
 	TaskCreate(TaskCreatePayload) (*Task, error)
 	TaskUpdate(TaskUpdatePayload) error
-	TaskDelete(int) (*Task, error)
+	TaskDelete(int) error
 	TaskRestore(int) (*Task, error)
+	TaskDragNDrop(int, int, int) error
 }
 
 type Task struct {
@@ -46,5 +47,3 @@ type TaskUpdatePayload struct {
 	WorkspaceID int    `json:"workspaceId"`
 	UserID      int    `json:"userId,omitempty"`
 }
-
-// TODO DRAGNDROP for TaskORDER

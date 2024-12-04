@@ -1,6 +1,7 @@
 package workspaces
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -113,6 +114,47 @@ func (h *Handler) handleUpdateWorkspace(w http.ResponseWriter, r *http.Request) 
 	}
 
 	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"msg": "Update Workspace Successfully!"})
+}
+
+// This is an example route handler for the TaskDragNDrop function
+func (h *Handler) handleTaskDragNDrop(w http.ResponseWriter, r *http.Request) {
+	// Extract the workspaceId from the URL parameter
+	vars := mux.Vars(r)
+	str, ok := vars["workspaceId"]
+	if !ok {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing workspace ID"))
+		return
+	}
+
+	workspaceId, err := strconv.Atoi(str)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid workspace ID"))
+		return
+	}
+
+	// Parse the request body to get sourceIndex and destinationIndex
+	var payload entities.TaskDragNDrop
+
+	err = json.NewDecoder(r.Body).Decode(&payload)
+	if err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	print("source ", payload.SourceIndex)
+	print("destination ", payload.DestinationIndex)
+	print("workspaceId ", workspaceId)
+
+	// Call the TaskDragNDrop method
+	err = h.store.TaskDragNDrop(workspaceId, payload.SourceIndex, payload.DestinationIndex)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to update task order: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Return a successful response
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintln(w, "Task order updated successfully")
 }
 
 func (h *Handler) handleDeleteWorkspace(w http.ResponseWriter, r *http.Request) {
