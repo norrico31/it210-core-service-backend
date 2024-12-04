@@ -24,31 +24,31 @@ until nc -z "${DB_HOST}" "${DB_PORT}"; do
 done
 echo "PostgreSQL is ready!"
 
-# Run migrations
-if [ -x /app/core-service/migrate ]; then
-  echo "ENTRYPOINT: Running migrations..."
-  if /app/core-service/migrate -path=/app/core-service/cmd/migrate/migrations -database "${DATABASE_PUBLIC_URL}"; then
-    echo "Migrations applied successfully."
-  else
-    echo "Migration failed. Exiting."
-    exit 1
-  fi
-else
-  echo "Migration executable not found. Skipping migrations."
-fi
+# # Run migrations
+# if [ -x /app/core-service/migrate ]; then
+#   echo "ENTRYPOINT: Running migrations..."
+#   if /app/core-service/migrate -path=/app/core-service/cmd/migrate/migrations -database "${DATABASE_PUBLIC_URL}"; then
+#     echo "Migrations applied successfully."
+#   else
+#     echo "Migration failed. Exiting."
+#     exit 1
+#   fi
+# else
+#   echo "Migration executable not found. Skipping migrations."
+# fi
 
-# Run seeding
-if [ -x /app/core-service/seed ]; then
-  echo "ENTRYPOINT: Running seeding..."
-  if /app/core-service/seed; then
-    echo "Seeding completed successfully."
-  else
-    echo "Seeding failed. Exiting."
-    exit 1
-  fi
-else
-  echo "Seeder executable not found. Skipping seeding."
-fi
+# # Run seeding
+# if [ -x /app/core-service/seed ]; then
+#   echo "ENTRYPOINT: Running seeding..."
+#   if /app/core-service/seed; then
+#     echo "Seeding completed successfully."
+#   else
+#     echo "Seeding failed. Exiting."
+#     exit 1
+#   fi
+# else
+#   echo "Seeder executable not found. Skipping seeding."
+# fi
 
 # Start the service
 echo "ENTRYPOINT: Starting core service..."
