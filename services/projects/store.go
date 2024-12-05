@@ -439,20 +439,20 @@ func (s *Store) ProjectCreate(payload entities.ProjectCreatePayload) (map[string
 	}
 
 	var started, deadline *time.Time
-	if payload.DateStarted != "" {
-		dateStarted, err := normalizeDate(payload.DateStarted)
-		if err != nil {
-			return nil, fmt.Errorf("invalid date format for DateStarted: %v", err)
-		}
-		started = &dateStarted
-	}
-	if payload.DateDeadline != "" {
-		dateDeadline, err := normalizeDate(payload.DateDeadline)
-		if err != nil {
-			return nil, fmt.Errorf("invalid date format for DateDeadline: %v", err)
-		}
-		deadline = &dateDeadline
-	}
+	// if payload.DateStarted != "" {
+	// 	dateStarted, err := normalizeDate(payload.DateStarted)
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("invalid date format for DateStarted: %v", err)
+	// 	}
+	// 	started = &dateStarted
+	// }
+	// if payload.DateDeadline != "" {
+	// 	dateDeadline, err := normalizeDate(payload.DateDeadline)
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("invalid date format for DateDeadline: %v", err)
+	// 	}
+	// 	deadline = &dateDeadline
+	// }
 
 	proj := entities.Project{}
 	err = tx.QueryRow(`

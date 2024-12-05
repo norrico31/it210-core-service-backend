@@ -81,6 +81,23 @@ func (h *Handler) handleProjectCreate(w http.ResponseWriter, r *http.Request) {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload %v", errs))
 		return
 	}
+	if payload.DateStarted != "" {
+		dateStarted, err := time.Parse("Jan-02-2006", payload.DateStarted)
+		if err != nil {
+			utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid date format for DateStarted"))
+			return
+		}
+		payload.DateStarted = dateStarted.Format("Jan-02-2006") // Convert time.Time back to string
+	}
+
+	if payload.DateDeadline != "" {
+		DateDeadline, err := time.Parse("Jan-02-2006", payload.DateDeadline)
+		if err != nil {
+			utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid date format for Date Deadline"))
+			return
+		}
+		payload.DateDeadline = DateDeadline.Format("Jan-02-2006") // Convert time.Time back to string
+	}
 
 	proj, err := h.store.ProjectCreate(payload)
 	if err != nil {
