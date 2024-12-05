@@ -268,14 +268,34 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 			p.id = $1 AND p.deletedAt IS NULL
 	`
 
-	// Query to retrieve tasks associated with the project
+	// Query to retrieve tasks associated with the project, including user and priority details
 	tasksQuery := `
 		SELECT 
-			id, name, description, userId, priorityId, projectId, createdAt, updatedAt, deletedAt, deletedBy
+			t.id, 
+			t.name, 
+			t.description, 
+			t.userId, 
+			t.priorityId, 
+			t.projectId, 
+			t.createdAt, 
+			t.updatedAt, 
+			t.deletedAt, 
+			t.deletedBy,
+			u.id AS user_id,
+			u.firstName AS user_first_name,
+			u.lastName AS user_last_name,
+			u.email AS user_email,
+			p.id AS priority_id,
+			p.name AS priority_name,
+			p.description AS priority_description
 		FROM 
-			project_tasks
+			project_tasks t
+		LEFT JOIN 
+			users u ON t.userId = u.id
+		LEFT JOIN 
+			priorities p ON t.priorityId = p.id
 		WHERE 
-			projectId = $1 AND deletedAt IS NULL
+			t.projectId = $1 AND t.deletedAt IS NULL
 	`
 
 	// Fetch project details
@@ -368,7 +388,7 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 		return nil, fmt.Errorf("project not found")
 	}
 
-	// Fetch project tasks only once
+	// Fetch project tasks with user and priority details
 	taskRows, err := s.db.Query(tasksQuery, id)
 	if err != nil {
 		return nil, err
@@ -378,20 +398,27 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 	taskMap := make(map[int]bool)
 	for taskRows.Next() {
 		task := entities.TasksProject{}
+		user := entities.User{}
+		priority := entities.Priority{}
 		var taskDeletedAt *time.Time
 		var taskDeletedBy *int
 
 		err := taskRows.Scan(
 			&task.ID, &task.Name, &task.Description, &task.UserID, &task.PriorityID, &task.ProjectID,
 			&task.CreatedAt, &task.UpdatedAt, &taskDeletedAt, &taskDeletedBy,
+			&user.ID, &user.FirstName, &user.LastName, &user.Email,
+			&priority.ID, &priority.Name, &priority.Description,
 		)
 		if err != nil {
 			return nil, err
 		}
 
+		task.User = user
+		task.Priority = priority
+		task.DeletedAt = taskDeletedAt
+		task.DeletedBy = taskDeletedBy
+
 		if !taskMap[task.ID] {
-			task.DeletedAt = taskDeletedAt
-			task.DeletedBy = taskDeletedBy
 			taskMap[task.ID] = true
 			project.Tasks = append(project.Tasks, task)
 		}
