@@ -155,11 +155,11 @@ func (h *Handler) handleProjectUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var userIDs []int
-	if payload.UserIDs != nil {
-		userIDs = *payload.UserIDs
+	if payload.UserIDs == nil {
+		userIDs = nil
 	} else {
-		for _, user := range existProj.Users {
-			userIDs = append(userIDs, user.ID)
+		for _, userId := range *payload.UserIDs {
+			userIDs = append(userIDs, userId)
 		}
 	}
 
