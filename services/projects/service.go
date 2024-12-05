@@ -113,13 +113,13 @@ func (h *Handler) handleProjectUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 	existProj, err := h.store.GetProject(projectId)
 
-	if payload.Name != "" {
+	if payload.Name == "" {
 		payload.Name = existProj.Name
 	}
-	if payload.Description != "" {
+	if payload.Description == "" {
 		payload.Description = existProj.Description
 	}
-	if payload.Progress != nil {
+	if payload.Progress == nil {
 		payload.Progress = existProj.Progress
 	}
 
@@ -142,15 +142,15 @@ func (h *Handler) handleProjectUpdate(w http.ResponseWriter, r *http.Request) {
 		existProj.DateDeadline = &dateDeadline // Convert string to *time.Time
 	}
 
-	if payload.Url != nil {
+	if payload.Url == nil {
 		payload.Url = existProj.Url
 	}
 
-	if payload.StatusID != nil {
+	if payload.StatusID == nil {
 		payload.StatusID = &existProj.StatusID
 	}
 
-	if payload.SegmentID != nil {
+	if payload.SegmentID == nil {
 		payload.SegmentID = &existProj.SegmentID
 	}
 
@@ -162,9 +162,6 @@ func (h *Handler) handleProjectUpdate(w http.ResponseWriter, r *http.Request) {
 			userIDs = append(userIDs, userId)
 		}
 	}
-
-	payload.StatusID = &existProj.StatusID
-	payload.SegmentID = &existProj.SegmentID
 
 	err = h.store.ProjectUpdate(projectId, payload, userIDs)
 	if err != nil {
