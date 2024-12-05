@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-playground/validator"
 	"github.com/gorilla/mux"
@@ -33,6 +34,7 @@ func (h *Handler) handleGetProjectDeleted(w http.ResponseWriter, r *http.Request
 	projects, err := h.store.GetProjects("IS NOT NULL")
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
+		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	utils.WriteJSON(w, http.StatusOK, map[string]interface{}{"data": projects})
@@ -112,41 +114,44 @@ func (h *Handler) handleProjectUpdate(w http.ResponseWriter, r *http.Request) {
 	existProj, err := h.store.GetProject(projectId)
 
 	if payload.Name != "" {
-		existProj.Name = payload.Name
+		payload.Name = existProj.Name
 	}
 	if payload.Description != "" {
-		existProj.Description = payload.Description
+		payload.Description = existProj.Description
 	}
 	if payload.Progress != nil {
-		existProj.Progress = payload.Progress
+		payload.Progress = existProj.Progress
 	}
+
 	if payload.DateStarted != "" {
-		dateStarted, err := normalizeDate(payload.DateStarted)
+		dateStarted, err := time.Parse("2006-01-02", payload.DateStarted)
 		if err != nil {
-			utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid date format for Date Started"))
+			utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid date format for DateStarted"))
 			return
 		}
-		existProj.DateStarted = &dateStarted
+		existProj.DateStarted = &dateStarted // Convert string to *time.Time
 	}
+
+	// Handle DateDeadline
 	if payload.DateDeadline != "" {
-		dateDeadline, err := normalizeDate(payload.DateDeadline)
+		dateDeadline, err := time.Parse("2006-01-02", payload.DateDeadline)
 		if err != nil {
-			utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid date format for Date Deadline"))
+			utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid date format for DateDeadline"))
 			return
 		}
-		existProj.DateDeadline = &dateDeadline
+		existProj.DateDeadline = &dateDeadline // Convert string to *time.Time
 	}
 
 	if payload.Url != nil {
-		existProj.Url = payload.Url
+		payload.Url = existProj.Url
 	}
 
 	if payload.StatusID != nil {
-		existProj.StatusID = *payload.StatusID
+		payload.StatusID = &existProj.StatusID
 	}
 
 	if payload.SegmentID != nil {
-		existProj.SegmentID = *payload.SegmentID
+		payload.SegmentID = &existProj.SegmentID
 	}
 
 	var userIDs []int
@@ -183,12 +188,6 @@ func (h *Handler) handleProjectDelete(w http.ResponseWriter, r *http.Request) {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid project ID"))
 		return
 	}
-
-	// existProj, err := h.store.GetProject(projectId)
-	// if err != nil {
-	// 	utils.WriteError(w, http.StatusNotFound, err)
-	// 	return
-	// }
 
 	project, err := h.store.ProjectDelete(projectId)
 

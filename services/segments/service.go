@@ -118,14 +118,8 @@ func (h *Handler) handleUpdateSegment(w http.ResponseWriter, r *http.Request) {
 
 	var projectIds = []int{}
 
-	if payload.ProjectIDs != nil {
-		for _, id := range *payload.ProjectIDs {
-			projectIds = append(projectIds, id)
-		}
-	} else {
-		for _, projId := range segment.Projects {
-			projectIds = append(projectIds, projId.ID)
-		}
+	for _, id := range *payload.ProjectIDs {
+		projectIds = append(projectIds, id)
 	}
 
 	err = h.store.UpdateSegment(entities.SegmentPayload{
