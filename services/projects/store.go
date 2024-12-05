@@ -51,7 +51,17 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 			u.createdAt AS user_created_at,
 			u.updatedAt AS user_updated_at,
 			u.deletedAt AS user_deleted_at,
-			u.deletedBy AS user_deleted_by
+			u.deletedBy AS user_deleted_by,
+
+			t.id AS task_id,
+			t.name AS task_name,
+			t.description AS task_description,
+			t.userId AS task_user_id,
+			t.priorityId AS task_priority_id,
+			t.createdAt AS task_created_at,
+			t.updatedAt AS task_updated_at,
+			t.deletedAt AS task_deleted_at,
+			t.deletedBy AS task_deleted_by
 
 		FROM 
 			projects p
@@ -65,6 +75,8 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 			users u ON up.deletedAt IS NULL AND up.user_id = u.id
 		LEFT JOIN
 			statuses stat ON stat.id = p.statusId
+		LEFT JOIN
+			project_tasks t ON t.deletedAt IS NULL AND t.projectId = p.id
 	`
 
 	rows, err := s.db.Query(query)
@@ -89,11 +101,18 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 		var userID, userAge, userDeletedBy, userRoleId, segmentId *int
 		var userLastActiveAt, userCreatedAt, userUpdatedAt, userDeletedAt *time.Time
 
+		task := entities.TasksProject{}
+		var taskID, taskUserID, taskPriorityID *int
+		var taskName, taskDescription *string
+		var taskCreatedAt, taskUpdatedAt, taskDeletedAt *time.Time
+		var taskDeletedBy *int
+
 		err := rows.Scan(
 			&projectId, &project.Name, &project.Description, &project.Url, &project.Progress, &projectStatusId, &dateStarted, &dateDeadline, &project.CreatedAt, &project.UpdatedAt, &project.DeletedAt, &project.DeletedBy,
 			&statusID, &statusName, &statusDescription,
 			&segmentId, &segmentName, &segmentDescription,
 			&userID, &userFirstName, &userLastName, &userEmail, &userAge, &userRoleId, &userLastActiveAt, &userCreatedAt, &userUpdatedAt, &userDeletedAt, &userDeletedBy,
+			&taskID, &taskName, &taskDescription, &taskUserID, &taskPriorityID, &taskCreatedAt, &taskUpdatedAt, &taskDeletedAt, &taskDeletedBy,
 		)
 		if err != nil {
 			return nil, err
@@ -102,10 +121,11 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 		if _, exists := projectsMap[*projectId]; !exists {
 			project.ID = *projectId
 			project.Users = []entities.User{}
+			project.Tasks = []entities.TasksProject{}
 			projectsMap[*projectId] = &project
 		}
 
-		if userID != nil {
+		if userID != nil && !userMap[*userID] {
 			user.ID = *userID
 			if userFirstName != nil {
 				user.FirstName = *userFirstName
@@ -133,11 +153,26 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 			user.DeletedAt = userDeletedAt
 			user.DeletedBy = userDeletedBy
 
-			if _, exists := userMap[user.ID]; !exists {
-				userMap[user.ID] = true
-				project.Users = append(project.Users, user)
-			}
+			userMap[*userID] = true
 			projectsMap[*projectId].Users = append(projectsMap[*projectId].Users, user)
+		}
+
+		if taskID != nil {
+			task.ID = *taskID
+			if taskName != nil {
+				task.Name = *taskName
+			}
+			if taskDescription != nil {
+				task.Description = *taskDescription
+			}
+			task.UserID = taskUserID
+			task.PriorityID = *taskPriorityID
+			task.CreatedAt = *taskCreatedAt
+			task.UpdatedAt = *taskUpdatedAt
+			task.DeletedAt = taskDeletedAt
+			task.DeletedBy = taskDeletedBy
+
+			projectsMap[*projectId].Tasks = append(projectsMap[*projectId].Tasks, task)
 		}
 
 		if projectStatusId != nil {
@@ -147,7 +182,6 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 				Name:        *statusName,
 				Description: *statusDescription,
 			}
-			project.StatusID = *projectStatusId
 			project.Status = status
 		}
 
@@ -182,35 +216,36 @@ func (s *Store) GetProjects(condition string) ([]*entities.Project, error) {
 }
 
 func (s *Store) GetProject(id int) (*entities.Project, error) {
-	query := `
+	// Query to retrieve project and related data
+	projectQuery := `
 		SELECT 
 			p.id AS project_id,
 			p.name AS project_name,
 			p.description AS project_description,
 			p.url AS project_url,
 			p.progress AS project_progress,
-			p.statusId project_status_id,
+			p.statusId AS project_status_id,
 			p.dateStarted AS project_date_started,
 			p.dateDeadline AS project_date_deadline,
 			p.createdAt AS project_created_at,
- 			p.updatedAt AS project_updated_at,
- 			p.deletedAt AS project_deleted_at,
+			p.updatedAt AS project_updated_at,
+			p.deletedAt AS project_deleted_at,
 			p.deletedBy AS project_deleted_by,
 
-			stat.id status_id,
-			stat.name status_name,
-			stat.description status_description,
+			stat.id AS status_id,
+			stat.name AS status_name,
+			stat.description AS status_description,
 
-			seg.id segment_id,
-			seg.name segment_name,
-			seg.description segment_description,
+			seg.id AS segment_id,
+			seg.name AS segment_name,
+			seg.description AS segment_description,
 
 			u.id AS user_id,
 			u.firstName AS user_first_name,
 			u.lastName AS user_last_name,
 			u.email AS user_email,
 			u.age AS user_age,
-			u.roleId as user_role_id,
+			u.roleId AS user_role_id,
 			u.lastActiveAt AS user_last_active_at,
 			u.createdAt AS user_created_at,
 			u.updatedAt AS user_updated_at,
@@ -233,7 +268,18 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 			p.id = $1 AND p.deletedAt IS NULL
 	`
 
-	rows, err := s.db.Query(query, id)
+	// Query to retrieve tasks associated with the project
+	tasksQuery := `
+		SELECT 
+			id, name, description, userId, priorityId, projectId, createdAt, updatedAt, deletedAt, deletedBy
+		FROM 
+			project_tasks
+		WHERE 
+			projectId = $1 AND deletedAt IS NULL
+	`
+
+	// Fetch project details
+	rows, err := s.db.Query(projectQuery, id)
 	if err != nil {
 		return nil, err
 	}
@@ -301,7 +347,6 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 			if userAge != nil {
 				user.Age = *userAge
 			}
-
 			user.LastActiveAt = userLastActiveAt
 			if userCreatedAt != nil {
 				user.CreatedAt = *userCreatedAt
@@ -321,6 +366,35 @@ func (s *Store) GetProject(id int) (*entities.Project, error) {
 
 	if project.ID == 0 {
 		return nil, fmt.Errorf("project not found")
+	}
+
+	// Fetch project tasks only once
+	taskRows, err := s.db.Query(tasksQuery, id)
+	if err != nil {
+		return nil, err
+	}
+	defer taskRows.Close()
+
+	taskMap := make(map[int]bool)
+	for taskRows.Next() {
+		task := entities.TasksProject{}
+		var taskDeletedAt *time.Time
+		var taskDeletedBy *int
+
+		err := taskRows.Scan(
+			&task.ID, &task.Name, &task.Description, &task.UserID, &task.PriorityID, &task.ProjectID,
+			&task.CreatedAt, &task.UpdatedAt, &taskDeletedAt, &taskDeletedBy,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if !taskMap[task.ID] {
+			task.DeletedAt = taskDeletedAt
+			task.DeletedBy = taskDeletedBy
+			taskMap[task.ID] = true
+			project.Tasks = append(project.Tasks, task)
+		}
 	}
 
 	return &project, nil

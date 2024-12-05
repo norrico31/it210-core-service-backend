@@ -12,22 +12,23 @@ type ProjectStore interface {
 }
 
 type Project struct {
-	ID           int        `json:"id"`
-	Name         string     `json:"name"`
-	Description  string     `json:"description"`
-	Progress     *float64   `json:"progress"`
-	Url          *string    `json:"url"`
-	StatusID     int        `json:"statusId"`
-	Status       Status     `json:"status"`
-	SegmentID    int        `json:"segmentId"`
-	Segment      Segment    `json:"segment"`
-	DateStarted  *time.Time `json:"dateStarted"`
-	DateDeadline *time.Time `json:"dateDeadline"`
-	CreatedAt    time.Time  `json:"createdAt"`
-	UpdatedAt    time.Time  `json:"updatedAt"`
-	Users        []User     `json:"users"`
-	DeletedBy    *int       `json:"deletedBy,omitempty"`
-	DeletedAt    *time.Time `json:"deletedAt,omitempty"`
+	ID           int            `json:"id"`
+	Name         string         `json:"name"`
+	Description  string         `json:"description"`
+	Progress     *float64       `json:"progress"`
+	Url          *string        `json:"url"`
+	StatusID     int            `json:"statusId"`
+	Status       Status         `json:"status"`
+	SegmentID    int            `json:"segmentId"`
+	Segment      Segment        `json:"segment"`
+	DateStarted  *time.Time     `json:"dateStarted"`
+	DateDeadline *time.Time     `json:"dateDeadline"`
+	CreatedAt    time.Time      `json:"createdAt"`
+	UpdatedAt    time.Time      `json:"updatedAt"`
+	Users        []User         `json:"users"`
+	DeletedBy    *int           `json:"deletedBy,omitempty"`
+	DeletedAt    *time.Time     `json:"deletedAt,omitempty"`
+	Tasks        []TasksProject `json:"Tasks"`
 }
 
 type ProjectCreatePayload struct {

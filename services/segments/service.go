@@ -118,6 +118,7 @@ func (h *Handler) handleUpdateSegment(w http.ResponseWriter, r *http.Request) {
 
 	var projectIds = []int{}
 
+	// TODO: STILL BUG
 	for _, id := range *payload.ProjectIDs {
 		projectIds = append(projectIds, id)
 	}
