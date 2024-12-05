@@ -124,7 +124,7 @@ func (h *Handler) handleProjectUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if payload.DateStarted != "" {
-		dateStarted, err := time.Parse("2006-01-02", payload.DateStarted)
+		dateStarted, err := time.Parse("Jan-02-2006", payload.DateStarted)
 		if err != nil {
 			utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid date format for DateStarted"))
 			return
@@ -134,7 +134,7 @@ func (h *Handler) handleProjectUpdate(w http.ResponseWriter, r *http.Request) {
 
 	// Handle DateDeadline
 	if payload.DateDeadline != "" {
-		dateDeadline, err := time.Parse("2006-01-02", payload.DateDeadline)
+		dateDeadline, err := time.Parse("Jan-02-2006", payload.DateDeadline)
 		if err != nil {
 			utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid date format for DateDeadline"))
 			return
