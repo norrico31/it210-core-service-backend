@@ -20,7 +20,7 @@ type User struct {
 	FirstName    string     `json:"firstName"`
 	LastName     string     `json:"lastName"`
 	Age          int        `json:"age"`
-	Email        string     `json:"e-mail"`
+	Email        string     `json:"email"`
 	RoleId       *int       `json:"roleId"`
 	Role         Role       `json:"role"`
 	Password     string     `json:"-"`
